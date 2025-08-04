@@ -8,22 +8,25 @@ using Mirror;
 public class ArduinoDataReciver : NetworkBehaviour
 {
     SerialPort serialPort;
-    public string portName = "COM3";
+    public string portName = "/dev/cu.usbmodem2201";
     public int baudRate = 19200;
     private ChangeEnviroment changeEnvironment;
-    
+
     void Start()
     {
+        // NetworkManager가 초기화되지 않았으면 대기
+        if (NetworkManager.singleton == null) return;
+
         // 서버에서만 아두이노 연결
-        if (!isServer) return;
-        
+        if (!NetworkManager.singleton.isNetworkActive || !isServer) return;
+
         changeEnvironment = FindObjectOfType<ChangeEnviroment>();
         if (changeEnvironment == null)
         {
             Debug.LogError("ChangeEnviroment component not found!");
             return;
         }
-        
+
         serialPort = new SerialPort(portName, baudRate);
         try
         {
@@ -35,19 +38,22 @@ public class ArduinoDataReciver : NetworkBehaviour
             Debug.LogError("Error opening serial port: " + e.Message);
         }
     }
-    
+
     void Update()
     {
+        // NetworkManager가 초기화되지 않았거나 네트워크가 활성화되지 않았으면 리턴
+        if (NetworkManager.singleton == null || !NetworkManager.singleton.isNetworkActive) return;
+
         // 서버에서만 실행
         if (!isServer) return;
-        
+
         if (serialPort != null && serialPort.IsOpen)
         {
             try
             {
                 string data = serialPort.ReadLine();
                 Debug.Log("Received data: " + data);
-                
+
                 // 아두이노에서 버튼 데이터 받으면 환경 변경
                 if (!string.IsNullOrEmpty(data) && changeEnvironment != null)
                 {
