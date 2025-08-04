@@ -47,9 +47,8 @@ public class ChangeEnviroment : NetworkBehaviour
     // 아두이노에서 호출되는 메서드
     public void OnButtonPressed(string buttonData)
     {
-        // NetworkManager 체크
-        if (NetworkManager.singleton == null || !NetworkManager.singleton.isNetworkActive) return;
-        if (!isServer) return;
+        // 서버에서만 실행
+        if (!NetworkServer.active) return;
 
         Debug.Log($"Button pressed: {buttonData}");
 
@@ -98,10 +97,10 @@ public class ChangeEnviroment : NetworkBehaviour
     // 테스트용 메서드 (키보드로 테스트 가능)
     void Update()
     {
-        // NetworkManager 체크
-        if (NetworkManager.singleton == null || !NetworkManager.singleton.isNetworkActive) return;
+        // 서버에서만 실행
+        if (!NetworkServer.active) return;
         
-        if (isServer && Input.GetKeyDown(KeyCode.Space))
+        if (Input.GetKeyDown(KeyCode.Space))
         {
             OnButtonPressed("test");
         }

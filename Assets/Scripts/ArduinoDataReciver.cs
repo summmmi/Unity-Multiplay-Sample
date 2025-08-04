@@ -5,7 +5,7 @@ using System.IO.Ports;
 using System;
 using Mirror;
 
-public class ArduinoDataReciver : NetworkBehaviour
+public class ArduinoDataReciver : MonoBehaviour
 {
     SerialPort serialPort;
     public string portName = "/dev/cu.usbmodem2201";
@@ -14,11 +14,8 @@ public class ArduinoDataReciver : NetworkBehaviour
 
     void Start()
     {
-        // NetworkManager가 초기화되지 않았으면 대기
-        if (NetworkManager.singleton == null) return;
-
         // 서버에서만 아두이노 연결
-        if (!NetworkManager.singleton.isNetworkActive || !isServer) return;
+        if (!NetworkServer.active) return;
 
         changeEnvironment = FindObjectOfType<ChangeEnviroment>();
         if (changeEnvironment == null)
@@ -41,11 +38,8 @@ public class ArduinoDataReciver : NetworkBehaviour
 
     void Update()
     {
-        // NetworkManager가 초기화되지 않았거나 네트워크가 활성화되지 않았으면 리턴
-        if (NetworkManager.singleton == null || !NetworkManager.singleton.isNetworkActive) return;
-
         // 서버에서만 실행
-        if (!isServer) return;
+        if (!NetworkServer.active) return;
 
         if (serialPort != null && serialPort.IsOpen)
         {
