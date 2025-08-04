@@ -23,39 +23,62 @@ public class ChangeEnviroment : NetworkBehaviour
 
     void Start()
     {
+        Debug.Log("ChangeEnvironment Start() called");
+
         // Global Volume 찾기
         if (globalVolume == null)
+        {
             globalVolume = FindObjectOfType<Volume>();
+            Debug.Log("Searching for Global Volume automatically");
+        }
 
         if (globalVolume == null)
         {
             Debug.LogError("Global Volume not found!");
             return;
         }
+        else
+        {
+            Debug.Log($"Global Volume found: {globalVolume.name}");
+        }
 
         // Color Adjustments 컴포넌트 가져오기 또는 추가
         if (!globalVolume.profile.TryGet<ColorAdjustments>(out colorAdjustments))
         {
             colorAdjustments = globalVolume.profile.Add<ColorAdjustments>(false);
+            Debug.Log("Color Adjustments component added to Global Volume profile");
+        }
+        else
+        {
+            Debug.Log("Color Adjustments component found in Global Volume profile");
         }
 
         // 초기 설정
         colorAdjustments.colorFilter.overrideState = true;
         colorAdjustments.colorFilter.value = tintColors[0];
+        Debug.Log($"Initial color set to: {tintColors[0]}");
     }
 
     // 아두이노에서 호출되는 메서드
     public void OnButtonPressed(string buttonData)
     {
-        // 서버에서만 실행
-        if (!NetworkServer.active) return;
+        Debug.Log($"OnButtonPressed called with data: '{buttonData}', NetworkServer.active: {NetworkServer.active}");
 
-        Debug.Log($"Button pressed: {buttonData}");
+        // 서버에서만 실행
+        if (!NetworkServer.active)
+        {
+            Debug.Log("Not server, ignoring button press");
+            return;
+        }
+
+        Debug.Log($"Processing button press: {buttonData}");
 
         // 버튼 데이터에 따라 색상 인덱스 결정
         int colorIndex = GetColorIndexFromData(buttonData);
+        Debug.Log($"Selected color index: {colorIndex}");
 
         // 색상 변경을 모든 클라이언트에 전송
+        Debug.Log($"Sending RPC to change color to index {colorIndex}");
         RpcChangeEnvironmentColor(colorIndex);
     }
 
@@ -99,9 +122,10 @@ public class ChangeEnviroment : NetworkBehaviour
     {
         // 서버에서만 실행
         if (!NetworkServer.active) return;
-        
+
         if (Input.GetKeyDown(KeyCode.Space))
         {
+            Debug.Log("Space key pressed, testing environment change");
             OnButtonPressed("test");
         }
     }
