@@ -5,6 +5,11 @@ using Mirror;
 
 public class Player : NetworkBehaviour
 {
+    void Start()
+    {
+        Debug.Log($"Player Start() - isServer: {isServer}, isClient: {isClient}, isLocalPlayer: {isLocalPlayer}, netId: {netId}");
+    }
+
     void PlayerMovement()
     {
         if (isLocalPlayer)
@@ -15,6 +20,7 @@ public class Player : NetworkBehaviour
             transform.position = transform.position + moveDirection * Time.deltaTime * 5f;
         }
     }
+
     void Update()
     {
         PlayerMovement();

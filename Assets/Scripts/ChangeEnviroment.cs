@@ -23,13 +23,10 @@ public class ChangeEnviroment : NetworkBehaviour
 
     void Start()
     {
-        Debug.Log("ChangeEnvironment Start() called");
-
         // Global Volume 찾기
         if (globalVolume == null)
         {
             globalVolume = FindObjectOfType<Volume>();
-            Debug.Log("Searching for Global Volume automatically");
         }
 
         if (globalVolume == null)
@@ -37,26 +34,16 @@ public class ChangeEnviroment : NetworkBehaviour
             Debug.LogError("Global Volume not found!");
             return;
         }
-        else
-        {
-            Debug.Log($"Global Volume found: {globalVolume.name}");
-        }
 
         // Color Adjustments 컴포넌트 가져오기 또는 추가
         if (!globalVolume.profile.TryGet<ColorAdjustments>(out colorAdjustments))
         {
             colorAdjustments = globalVolume.profile.Add<ColorAdjustments>(false);
-            Debug.Log("Color Adjustments component added to Global Volume profile");
-        }
-        else
-        {
-            Debug.Log("Color Adjustments component found in Global Volume profile");
         }
 
         // 초기 설정
         colorAdjustments.colorFilter.overrideState = true;
         colorAdjustments.colorFilter.value = tintColors[0];
-        Debug.Log($"Initial color set to: {tintColors[0]}");
     }
 
     // 아두이노에서 호출되는 메서드
@@ -113,7 +100,7 @@ public class ChangeEnviroment : NetworkBehaviour
         if (colorAdjustments != null)
         {
             colorAdjustments.colorFilter.value = newColor;
-            Debug.Log($"Environment color changed to: {newColor}");
+            Debug.Log($"✅ Environment color changed to: {newColor}");
         }
     }
 
