@@ -23,9 +23,9 @@ public class ArduinoDataReciver : MonoBehaviour
     private void InitializeSerial()
     {
         if (isInitialized) return;
-        
+
         Debug.Log($"InitializeSerial() - NetworkServer.active: {NetworkServer.active}");
-        
+
         changeEnvironment = FindObjectOfType<ChangeEnviroment>();
         if (changeEnvironment == null)
         {
@@ -39,13 +39,13 @@ public class ArduinoDataReciver : MonoBehaviour
 
         Debug.Log($"Available ports: {string.Join(", ", SerialPort.GetPortNames())}");
         Debug.Log($"Attempting to connect to Arduino on port: {portName} with baud rate: {baudRate}");
-        
+
         try
         {
             serialPort = new SerialPort(portName, baudRate);
             serialPort.ReadTimeout = 50; // 50ms timeout
             serialPort.WriteTimeout = 1000;
-            
+
             Debug.Log("Serial port object created, attempting to open...");
             serialPort.Open();
             Debug.Log($"✅ Arduino serial port opened successfully on {portName}");
@@ -73,7 +73,7 @@ public class ArduinoDataReciver : MonoBehaviour
         {
             InitializeSerial();
         }
-        
+
         // 서버에서만 실행
         if (!NetworkServer.active) return;
 
@@ -100,7 +100,7 @@ public class ArduinoDataReciver : MonoBehaviour
             try
             {
                 readAttempts++;
-                
+
                 // 데이터가 있는지 먼저 확인
                 if (serialPort.BytesToRead > 0)
                 {
@@ -116,7 +116,7 @@ public class ArduinoDataReciver : MonoBehaviour
                     }
                 }
             }
-            catch (TimeoutException) 
+            catch (TimeoutException)
             {
                 // Timeout은 정상 - 데이터가 없을 때 발생
             }
