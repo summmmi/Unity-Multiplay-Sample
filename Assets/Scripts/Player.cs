@@ -9,6 +9,14 @@ public class Player : NetworkBehaviour
 {
     [Header("Movement Settings")]
     [SerializeField] private float moveSpeed = 5f;
+    
+    [Header("Mobile Controls")]
+    [SerializeField] private bool enableMobileControls = true;
+    [SerializeField] private bool smoothMovement = true;
+    [SerializeField] private float movementSmoothing = 2f;
+    
+    private Vector3 smoothedMovement = Vector3.zero;
+    private MobileInputManager mobileInput;
 
     [Header("Camera Settings")]
     [SerializeField] private Camera playerCamera;
@@ -19,6 +27,34 @@ public class Player : NetworkBehaviour
     {
         Debug.Log($"Player Start() - isServer: {isServer}, isClient: {isClient}, isLocalPlayer: {isLocalPlayer}, netId: {netId}");
         SetupPlayerCamera();
+        SetupMobileInput();
+    }
+    
+    void SetupMobileInput()
+    {
+        // WebGL 클라이언트에서만 모바일 입력 활성화
+        if (isLocalPlayer && !isServer && enableMobileControls)
+        {
+            // 약간의 지연 후 모바일 입력 매니저 찾기 (초기화 순서 문제 해결)
+            StartCoroutine(SetupMobileInputDelayed());
+        }
+    }
+    
+    System.Collections.IEnumerator SetupMobileInputDelayed()
+    {
+        yield return new WaitForSeconds(0.5f);
+        
+        mobileInput = MobileInputManager.Instance;
+        
+        if (mobileInput != null && playerCamera != null)
+        {
+            mobileInput.SetPlayerCamera(playerCamera);
+            Debug.Log($"[Player] 모바일 입력 매니저 연결됨 - WebGL: {Application.platform == RuntimePlatform.WebGLPlayer}");
+        }
+        else
+        {
+            Debug.LogWarning($"[Player] 모바일 입력 매니저 연결 실패 - Manager: {mobileInput != null}, Camera: {playerCamera != null}");
+        }
     }
 
     void SetupPlayerCamera()
@@ -110,24 +146,74 @@ public class Player : NetworkBehaviour
     {
         if (isLocalPlayer && !isServer) // 클라이언트 플레이어만 이동
         {
+            Vector3 moveDirection = Vector3.zero;
+            
+            // 키보드/게임패드 입력
             float moveX = Input.GetAxis("Horizontal");
             float moveZ = Input.GetAxis("Vertical");
-
-            if (moveX != 0 || moveZ != 0) // 움직임이 있을 때만 로그
+            
+            if (moveX != 0 || moveZ != 0)
             {
-                Vector3 oldPosition = transform.position;
-                Vector3 moveDirection = new Vector3(moveX, 0, moveZ);
-                transform.position = transform.position + moveDirection * moveSpeed * Time.deltaTime;
+                moveDirection = new Vector3(moveX, 0, moveZ);
+            }
+            
+            // 모바일 조이스틱 입력 처리
+            if (enableMobileControls && mobileInput != null)
+            {
+                Vector2 joystickInput = mobileInput.MovementInput;
+                if (joystickInput != Vector2.zero)
+                {
+                    moveDirection = new Vector3(joystickInput.x, 0, joystickInput.y);
+                    
+                    // 디버그 로그
+                    if (Time.time % 1f < Time.deltaTime)
+                    {
+                        Debug.Log($"[Player] 조이스틱 입력: {joystickInput}, 이동방향: {moveDirection}");
+                    }
+                }
+            }
+            
+            // 움직임 적용 (스무딩 옵션)
+            if (moveDirection != Vector3.zero)
+            {
+                moveDirection.Normalize();
+                
+                if (smoothMovement && Application.isMobilePlatform)
+                {
+                    // 모바일에서는 부드러운 움직임 적용
+                    smoothedMovement = Vector3.Lerp(smoothedMovement, moveDirection, movementSmoothing * Time.deltaTime);
+                    transform.position += smoothedMovement * moveSpeed * Time.deltaTime;
+                }
+                else
+                {
+                    // PC에서는 즉시 반응
+                    transform.position += moveDirection * moveSpeed * Time.deltaTime;
+                }
 
-                // 카메라 위치 확인
-                if (playerCamera != null)
+                // 카메라 위치 확인 (5초마다만 로그)
+                if (playerCamera != null && Time.time % 5f < Time.deltaTime)
                 {
                     Debug.Log($"[Player] 이동: Player={transform.position}, Camera={playerCamera.transform.position}");
+                }
+            }
+            else if (smoothMovement && Application.isMobilePlatform)
+            {
+                // 터치가 끝났을 때 점진적으로 정지
+                smoothedMovement = Vector3.Lerp(smoothedMovement, Vector3.zero, movementSmoothing * Time.deltaTime);
+                if (smoothedMovement.magnitude > 0.01f)
+                {
+                    transform.position += smoothedMovement * moveSpeed * Time.deltaTime;
                 }
             }
 
             // 카메라가 플레이어를 따라가도록 강제 업데이트
             UpdateCameraPosition();
+            
+            // 모바일 카메라 회전 처리
+            if (enableMobileControls && mobileInput != null)
+            {
+                mobileInput.ApplyCameraRotation();
+            }
         }
     }
 
@@ -135,22 +221,55 @@ public class Player : NetworkBehaviour
     {
         if (playerCamera != null && isLocalPlayer && !isServer)
         {
-            // 카메라가 플레이어의 자식인지 확인하고, 위치를 강제로 업데이트
+            // 더 안정적인 카메라 트래킹을 위해 직접 위치 설정
+            Vector3 targetCameraPosition = transform.position + cameraOffset;
+            
+            // 카메라가 플레이어의 자식인지 확인
             if (playerCamera.transform.parent == transform)
             {
-                // 이미 올바른 위치에 있는지 확인
+                // 로컬 위치로 설정 (부모가 있는 경우)
                 if (Vector3.Distance(playerCamera.transform.localPosition, cameraOffset) > 0.01f)
                 {
                     playerCamera.transform.localPosition = cameraOffset;
-                    Debug.Log($"[Player] 카메라 위치 강제 업데이트: {cameraOffset}");
+                    
+                    // 5초마다만 로그 출력
+                    if (Time.time % 5f < Time.deltaTime)
+                    {
+                        Debug.Log($"[Player] 카메라 로컬 위치 업데이트: {cameraOffset}");
+                    }
                 }
             }
             else
             {
-                // 부모가 다르면 다시 설정
-                playerCamera.transform.SetParent(transform);
-                playerCamera.transform.localPosition = cameraOffset;
-                Debug.Log($"[Player] 카메라 부모 재설정 및 위치 업데이트: {cameraOffset}");
+                // 부모가 없거나 다른 경우 월드 위치로 직접 설정
+                if (Vector3.Distance(playerCamera.transform.position, targetCameraPosition) > 0.01f)
+                {
+                    playerCamera.transform.position = targetCameraPosition;
+                    
+                    // 5초마다만 로그 출력
+                    if (Time.time % 5f < Time.deltaTime)
+                    {
+                        Debug.Log($"[Player] 카메라 월드 위치 업데이트: {targetCameraPosition}");
+                    }
+                }
+                
+                // 필요시 부모 재설정
+                if (playerCamera.transform.parent != transform)
+                {
+                    playerCamera.transform.SetParent(transform);
+                    playerCamera.transform.localPosition = cameraOffset;
+                    Debug.Log($"[Player] 카메라 부모 재설정 및 위치 업데이트: {cameraOffset}");
+                }
+            }
+            
+            // 모바일 입력이 활성화된 경우 카메라 회전은 MobileInputManager가 처리
+            // PC에서만 카메라 회전을 플레이어에 맞춤
+            if (!enableMobileControls || mobileInput == null)
+            {
+                if (playerCamera.transform.rotation != transform.rotation)
+                {
+                    playerCamera.transform.rotation = transform.rotation;
+                }
             }
         }
     }
