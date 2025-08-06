@@ -9,19 +9,59 @@ public class AutoNetworkManager : NetworkManager
     [Header("Auto Network Settings")]
     [SerializeField] private bool enableDebugLogs = true;
     [SerializeField] private string[] arduinoPortPatterns = { "COM", "tty.usb", "tty.wchusbserial" };
-    [SerializeField] private int networkPort = 7778;
-    
-    [Header("Transport References")]
-    [SerializeField] private Transport telepathyTransport;
-    [SerializeField] private Transport simpleWebTransport;
-    
+    [SerializeField] private int telepathyPort = 7778;
+    [SerializeField] private int simpleWebPort = 7779;
+
+    [Header("MultiplexTransport Settings")]
+    [SerializeField] private MultiplexTransport multiplexTransport;
+    [SerializeField] private TelepathyTransport telepathyTransport;
+    [SerializeField] private SimpleWebTransport simpleWebTransport;
+
+    [Header("Transport Configuration")]
+    [Tooltip("MultiplexTransport를 사용하여 TelepathyTransport와 SimpleWebTransport를 동시에 지원합니다.")]
+    [SerializeField] private bool useMultiplexTransport = true;
+
     private bool isArduinoConnected = false;
     private bool isInitialized = false;
+
+    /*
+    === MultiplexTransport 설정 방법 ===
+    
+    1. Unity Inspector 설정:
+       - GameObject에 MultiplexTransport 컴포넌트 추가
+       - GameObject에 TelepathyTransport 컴포넌트 추가  
+       - GameObject에 SimpleWebTransport 컴포넌트 추가
+    
+    2. MultiplexTransport 설정:
+       - Transports 배열 크기를 2로 설정
+       - Element 0: TelepathyTransport 할당
+       - Element 1: SimpleWebTransport 할당
+    
+    3. NetworkManager 설정:
+       - Transport 필드에 MultiplexTransport 할당
+    
+    4. 포트 설정:
+       - TelepathyTransport Port: 7778
+       - SimpleWebTransport Port: 7779
+    
+    5. 동작 방식:
+       - Host (Standalone): 두 Transport 모두 리스닝
+       - Client (WebGL): SimpleWebTransport로 연결
+       - Client (Standalone): TelepathyTransport로 연결
+    */
+
+    public override void Awake()
+    {
+        // MultiplexTransport를 먼저 설정 (base.Awake() 호출 전에)
+        SetupMultiplexTransport();
+        
+        base.Awake();
+    }
 
     public override void Start()
     {
         base.Start();
-        
+
         if (!isInitialized)
         {
             InitializeNetworkManager();
@@ -31,19 +71,19 @@ public class AutoNetworkManager : NetworkManager
     private void InitializeNetworkManager()
     {
         isInitialized = true;
-        
+
         // 아두이노 연결 상태 확인
         isArduinoConnected = HasArduinoDevice();
-        
-        // Transport 설정
-        SetupTransport();
-        
+
+        // Transport는 이미 Awake()에서 설정됨
+        // SetupTransport(); // MultiplexTransport 사용시 불필요
+
         // 네트워크 포트 설정
         SetNetworkPort();
-        
+
         // 플랫폼별 자동 Host/Client 결정
         DetermineNetworkMode();
-        
+
         if (enableDebugLogs)
         {
             LogNetworkConfiguration();
@@ -92,26 +132,16 @@ public class AutoNetworkManager : NetworkManager
 #endif
     }
 
-    private void SetupTransport()
+    private void SetupMultiplexTransport()
     {
-#if UNITY_WEBGL && !UNITY_EDITOR
-        // WebGL: SimpleWebTransport 사용
-        if (simpleWebTransport == null)
+        if (!useMultiplexTransport)
         {
-            simpleWebTransport = gameObject.GetComponent<SimpleWebTransport>();
-            if (simpleWebTransport == null)
-            {
-                simpleWebTransport = gameObject.AddComponent<SimpleWebTransport>();
-            }
+            // 기존 단일 Transport 방식 사용
+            SetupSingleTransport();
+            return;
         }
-        
-        transport = simpleWebTransport;
-        
-        if (enableDebugLogs)
-            Debug.Log("WebGL Platform: Using SimpleWebTransport");
-            
-#else
-        // Standalone: TelepathyTransport 사용
+
+        // TelepathyTransport와 SimpleWebTransport를 먼저 설정
         if (telepathyTransport == null)
         {
             telepathyTransport = gameObject.GetComponent<TelepathyTransport>();
@@ -121,37 +151,135 @@ public class AutoNetworkManager : NetworkManager
             }
         }
         
-        transport = telepathyTransport;
-        
+        if (simpleWebTransport == null)
+        {
+            simpleWebTransport = gameObject.GetComponent<SimpleWebTransport>();
+            if (simpleWebTransport == null)
+            {
+                simpleWebTransport = gameObject.AddComponent<SimpleWebTransport>();
+            }
+        }
+
+        // MultiplexTransport 자동 설정 (sub-transport들이 준비된 후)
+        if (multiplexTransport == null)
+        {
+            multiplexTransport = gameObject.GetComponent<MultiplexTransport>();
+            if (multiplexTransport == null)
+            {
+                multiplexTransport = gameObject.AddComponent<MultiplexTransport>();
+                // AddComponent 직후 바로 transports 배열 설정
+                multiplexTransport.transports = new Transport[] { telepathyTransport, simpleWebTransport };
+            }
+            else
+            {
+                // 기존 컴포넌트인 경우에도 transports 배열 설정
+                multiplexTransport.transports = new Transport[] { telepathyTransport, simpleWebTransport };
+            }
+        }
+
+        // MultiplexTransport를 기본 Transport로 설정
+        Transport.active = multiplexTransport;
+        transport = multiplexTransport;
+
         if (enableDebugLogs)
-            Debug.Log("Standalone Platform: Using TelepathyTransport");
+        {
+            Debug.Log("[AutoNetworkManager] MultiplexTransport 설정 완료");
+            Debug.Log($"Active Transport: {Transport.active?.GetType().Name}");
+            Debug.Log($"NetworkManager Transport: {transport?.GetType().Name}");
+            Debug.Log($"Sub-transports: TelepathyTransport, SimpleWebTransport");
+        }
+    }
+
+    private void SetupSingleTransport()
+    {
+        // 기존 단일 Transport 로직 (하위 호환성)
+#if UNITY_WEBGL && !UNITY_EDITOR
+        if (simpleWebTransport == null)
+        {
+            simpleWebTransport = gameObject.GetComponent<SimpleWebTransport>();
+            if (simpleWebTransport == null)
+            {
+                simpleWebTransport = gameObject.AddComponent<SimpleWebTransport>();
+            }
+        }
+        transport = simpleWebTransport;
+        if (enableDebugLogs)
+            Debug.Log("WebGL Platform: Using SimpleWebTransport (Single Mode)");
+#else
+        if (telepathyTransport == null)
+        {
+            telepathyTransport = gameObject.GetComponent<TelepathyTransport>();
+            if (telepathyTransport == null)
+            {
+                telepathyTransport = gameObject.AddComponent<TelepathyTransport>();
+            }
+        }
+        transport = telepathyTransport;
+        if (enableDebugLogs)
+            Debug.Log("Standalone Platform: Using TelepathyTransport (Single Mode)");
 #endif
     }
 
     private void SetNetworkPort()
+    {
+        if (useMultiplexTransport)
+        {
+            // MultiplexTransport 사용시 개별 Transport 포트 설정
+            SetupMultiplexTransportPorts();
+        }
+        else
+        {
+            // 단일 Transport 포트 설정 (기존 로직)
+            SetupSingleTransportPort();
+        }
+    }
+
+    private void SetupMultiplexTransportPorts()
+    {
+        // TelepathyTransport 포트 설정
+        if (telepathyTransport != null && telepathyTransport is PortTransport telepathyPortTransport)
+        {
+            telepathyPortTransport.Port = (ushort)telepathyPort;
+            if (enableDebugLogs)
+                Debug.Log($"TelepathyTransport port set to: {telepathyPort}");
+        }
+
+        // SimpleWebTransport 포트 설정
+        if (simpleWebTransport != null)
+        {
+            simpleWebTransport.port = (ushort)simpleWebPort;
+            simpleWebTransport.clientWebsocketSettings.ClientPortOption = WebsocketPortOption.DefaultSameAsServer;
+            simpleWebTransport.clientWebsocketSettings.CustomClientPort = (ushort)simpleWebPort;
+
+            if (enableDebugLogs)
+                Debug.Log($"SimpleWebTransport port set to: {simpleWebPort}");
+        }
+
+        if (enableDebugLogs)
+            Debug.Log($"[MultiplexTransport] Transports configured - Telepathy: {telepathyPort}, SimpleWeb: {simpleWebPort}");
+    }
+
+    private void SetupSingleTransportPort()
     {
         if (transport != null)
         {
             // SimpleWebTransport 설정
             if (transport is SimpleWebTransport simpleWeb)
             {
-                // 서버 포트 설정
-                simpleWeb.port = (ushort)networkPort;
-                
-                // 클라이언트 설정: Default Same As Server, 포트 7778
+                simpleWeb.port = (ushort)simpleWebPort;
                 simpleWeb.clientWebsocketSettings.ClientPortOption = WebsocketPortOption.DefaultSameAsServer;
-                simpleWeb.clientWebsocketSettings.CustomClientPort = (ushort)networkPort;
-                
+                simpleWeb.clientWebsocketSettings.CustomClientPort = (ushort)simpleWebPort;
+
                 if (enableDebugLogs)
-                    Debug.Log($"SimpleWebTransport configured - Server Port: {networkPort}, Client: Default Same As Server");
+                    Debug.Log($"SimpleWebTransport configured - Server Port: {simpleWebPort}");
             }
-            // 다른 Transport들은 PortTransport 인터페이스 사용
+            // 다른 Transport들은 PortTransport 인터페이스 사용 (TelepathyTransport)
             else if (transport is PortTransport portTransport)
             {
-                portTransport.Port = (ushort)networkPort;
-                
+                portTransport.Port = (ushort)telepathyPort;
+
                 if (enableDebugLogs)
-                    Debug.Log($"Transport port set to: {networkPort}");
+                    Debug.Log($"Transport port set to: {telepathyPort}");
             }
         }
     }
@@ -171,7 +299,7 @@ public class AutoNetworkManager : NetworkManager
         {
             // 아두이노 있으면 Host 모드
             StartCoroutine(StartHostDelayed());
-            
+
             if (enableDebugLogs)
                 Debug.Log("Arduino detected: Starting as Host");
         }
@@ -179,7 +307,7 @@ public class AutoNetworkManager : NetworkManager
         {
             // 아두이노 없으면 Client 모드
             StartCoroutine(StartClientDelayed());
-            
+
             if (enableDebugLogs)
                 Debug.Log("No Arduino: Starting as Client");
         }
@@ -190,7 +318,7 @@ public class AutoNetworkManager : NetworkManager
     {
         // 약간의 지연 후 Host 시작 (초기화 완료 대기)
         yield return new WaitForSeconds(0.5f);
-        
+
         if (!NetworkServer.active && !NetworkClient.active)
         {
             StartHost();
@@ -201,7 +329,7 @@ public class AutoNetworkManager : NetworkManager
     {
         // 약간의 지연 후 Client 시작 (초기화 완료 대기)
         yield return new WaitForSeconds(0.5f);
-        
+
         if (!NetworkClient.active)
         {
             StartClient();
@@ -213,13 +341,22 @@ public class AutoNetworkManager : NetworkManager
         Debug.Log("=== Auto Network Manager Configuration ===");
         Debug.Log($"Platform: {Application.platform}");
         Debug.Log($"Arduino Connected: {isArduinoConnected}");
-        Debug.Log($"Transport: {transport?.GetType().Name}");
-        Debug.Log($"Network Port: {networkPort}");
-        
+        Debug.Log($"Use MultiplexTransport: {useMultiplexTransport}");
+        Debug.Log($"Active Transport: {Transport.active?.GetType().Name}");
+        Debug.Log($"NetworkManager Transport: {transport?.GetType().Name}");
+        Debug.Log($"Telepathy Port: {telepathyPort}, SimpleWeb Port: {simpleWebPort}");
+
+        if (useMultiplexTransport && multiplexTransport != null)
+        {
+            Debug.Log($"MultiplexTransport Components:");
+            Debug.Log($"  - TelepathyTransport: {(telepathyTransport != null ? "✓" : "✗")}");
+            Debug.Log($"  - SimpleWebTransport: {(simpleWebTransport != null ? "✓" : "✗")}");
+        }
+
 #if UNITY_WEBGL && !UNITY_EDITOR
-        Debug.Log("Mode: Client (WebGL)");
+        Debug.Log("Mode: Client (WebGL) - Will use SimpleWebTransport");
 #else
-        Debug.Log($"Mode: {(isArduinoConnected ? "Host" : "Client")} (Standalone)");
+        Debug.Log($"Mode: {(isArduinoConnected ? "Host" : "Client")} (Standalone) - Will use TelepathyTransport");
 #endif
         Debug.Log("==========================================");
     }
@@ -227,10 +364,10 @@ public class AutoNetworkManager : NetworkManager
     public override void OnStartHost()
     {
         base.OnStartHost();
-        
+
         if (enableDebugLogs)
             Debug.Log("Host started successfully");
-            
+
         // Host는 플레이어 프리팹을 생성하지 않음
         autoCreatePlayer = false;
     }
@@ -238,10 +375,10 @@ public class AutoNetworkManager : NetworkManager
     public override void OnStartClient()
     {
         base.OnStartClient();
-        
+
         if (enableDebugLogs)
             Debug.Log("Client started successfully");
-            
+
         // Client는 플레이어 프리팹을 자동 생성
         autoCreatePlayer = true;
     }
@@ -250,12 +387,12 @@ public class AutoNetworkManager : NetworkManager
     {
         // 플레이어 스폰 위치 결정
         Transform startPos = GetStartPosition();
-        GameObject player = startPos != null ? 
-            Instantiate(playerPrefab, startPos.position, startPos.rotation) : 
+        GameObject player = startPos != null ?
+            Instantiate(playerPrefab, startPos.position, startPos.rotation) :
             Instantiate(playerPrefab);
-            
+
         NetworkServer.AddPlayerForConnection(conn, player);
-        
+
         if (enableDebugLogs)
             Debug.Log($"Player added for connection {conn.connectionId}");
     }
@@ -263,7 +400,7 @@ public class AutoNetworkManager : NetworkManager
     public override void OnClientConnect()
     {
         base.OnClientConnect();
-        
+
         if (enableDebugLogs)
             Debug.Log("Client connected to server");
     }
@@ -271,7 +408,7 @@ public class AutoNetworkManager : NetworkManager
     public override void OnClientDisconnect()
     {
         base.OnClientDisconnect();
-        
+
         if (enableDebugLogs)
             Debug.Log("Client disconnected from server");
     }
@@ -279,7 +416,7 @@ public class AutoNetworkManager : NetworkManager
     public override void OnServerDisconnect(NetworkConnectionToClient conn)
     {
         base.OnServerDisconnect(conn);
-        
+
         if (enableDebugLogs)
             Debug.Log($"Client {conn.connectionId} disconnected from server");
     }
@@ -289,7 +426,7 @@ public class AutoNetworkManager : NetworkManager
     public void RefreshArduinoDetection()
     {
         isArduinoConnected = HasArduinoDevice();
-        
+
         if (enableDebugLogs)
         {
             Debug.Log($"Arduino detection refreshed. Connected: {isArduinoConnected}");
@@ -308,10 +445,10 @@ public class AutoNetworkManager : NetworkManager
                 telepathyTransport = gameObject.AddComponent<TelepathyTransport>();
             }
         }
-        
+
         transport = telepathyTransport;
         SetNetworkPort();
-        
+
         if (enableDebugLogs)
             Debug.Log("Switched to TelepathyTransport");
 #endif
@@ -327,10 +464,10 @@ public class AutoNetworkManager : NetworkManager
                 simpleWebTransport = gameObject.AddComponent<SimpleWebTransport>();
             }
         }
-        
+
         transport = simpleWebTransport;
         SetNetworkPort();
-        
+
         if (enableDebugLogs)
             Debug.Log("Switched to SimpleWebTransport");
     }
