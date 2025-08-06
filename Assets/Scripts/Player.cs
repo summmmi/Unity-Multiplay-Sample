@@ -154,7 +154,26 @@ public class Player : NetworkBehaviour
             
             if (moveX != 0 || moveZ != 0)
             {
-                moveDirection = new Vector3(moveX, 0, moveZ);
+                // 키보드 입력도 카메라 기준으로 변환
+                if (playerCamera != null)
+                {
+                    Vector3 cameraForward = playerCamera.transform.forward;
+                    Vector3 cameraRight = playerCamera.transform.right;
+                    
+                    // Y축 제거 (수평면에서만 이동)
+                    cameraForward.y = 0;
+                    cameraRight.y = 0;
+                    cameraForward.Normalize();
+                    cameraRight.Normalize();
+                    
+                    // 키보드 입력을 카메라 기준으로 변환
+                    moveDirection = cameraRight * moveX + cameraForward * moveZ;
+                }
+                else
+                {
+                    // 카메라가 없으면 월드 기준
+                    moveDirection = new Vector3(moveX, 0, moveZ);
+                }
             }
             
             // 모바일 조이스틱 입력 처리
@@ -163,12 +182,23 @@ public class Player : NetworkBehaviour
                 Vector2 joystickInput = mobileInput.MovementInput;
                 if (joystickInput != Vector2.zero)
                 {
-                    moveDirection = new Vector3(joystickInput.x, 0, joystickInput.y);
+                    // 카메라 기준으로 이동 방향 변환
+                    Vector3 cameraForward = playerCamera.transform.forward;
+                    Vector3 cameraRight = playerCamera.transform.right;
+                    
+                    // Y축 제거 (수평면에서만 이동)
+                    cameraForward.y = 0;
+                    cameraRight.y = 0;
+                    cameraForward.Normalize();
+                    cameraRight.Normalize();
+                    
+                    // 조이스틱 입력을 카메라 기준으로 변환
+                    moveDirection = cameraRight * joystickInput.x + cameraForward * joystickInput.y;
                     
                     // 디버그 로그
-                    if (Time.time % 1f < Time.deltaTime)
+                    if (Time.time % 2f < Time.deltaTime)
                     {
-                        Debug.Log($"[Player] 조이스틱 입력: {joystickInput}, 이동방향: {moveDirection}");
+                        Debug.Log($"[Player] 조이스틱: {joystickInput}, 카메라 기준 이동: {moveDirection}");
                     }
                 }
             }
