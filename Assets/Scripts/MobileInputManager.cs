@@ -10,7 +10,8 @@ public class MobileInputManager : MonoBehaviour
     
     [Header("Camera Rotation Settings")]
     [SerializeField] private float cameraSensitivity = 5f; // 2에서 5로 증가
-    [SerializeField] private float cameraVerticalLimit = 60f;
+    [SerializeField] private float cameraVerticalLimitUp = 80f;    // 위쪽 제한 (하늘)
+    [SerializeField] private float cameraVerticalLimitDown = 60f;  // 아래쪽 제한 (바닥) - 플레이어 모델 안 보이게
     [SerializeField] private bool invertY = false;
     
     [Header("Joystick Area")]
@@ -262,10 +263,12 @@ public class MobileInputManager : MonoBehaviour
             cameraTransform.parent.Rotate(Vector3.up * mouseX);
         }
         
-        // 수직 회전 (카메라 X축 회전)
+        // 수직 회전 (카메라 X축 회전) - 위/아래 제한 분리
         float mouseY = CameraInput.y * sensitivity * Time.deltaTime * (invertY ? 1f : -1f);
         currentCameraRotationX -= mouseY;
-        currentCameraRotationX = Mathf.Clamp(currentCameraRotationX, -cameraVerticalLimit, cameraVerticalLimit);
+        
+        // 위쪽(하늘)과 아래쪽(바닥) 제한을 다르게 설정
+        currentCameraRotationX = Mathf.Clamp(currentCameraRotationX, -cameraVerticalLimitUp, cameraVerticalLimitDown);
         
         cameraTransform.localRotation = Quaternion.Euler(currentCameraRotationX, 0f, 0f);
         
