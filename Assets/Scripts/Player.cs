@@ -22,6 +22,14 @@ public class Player : NetworkBehaviour
     [SyncVar(hook = nameof(OnAnimationStateChanged))]
     private int currentAnimationState = 0; // 0=idle, 1=walk, 2=meet
 
+    [Header("Meet Detection")]
+    [SerializeField] private float meetDistance = 2.0f; // meet 감지 거리
+    [SerializeField] private float meetDuration = 3.0f; // meet 지속 시간
+    [SerializeField] private float meetCooldown = 5.0f; // meet 쿨다운 시간
+    private bool isMeeting = false;
+    private float meetStartTime = 0f;
+    private float lastMeetTime = 0f;
+
     [Header("Camera Settings")]
     [SerializeField] private Camera playerCamera;
     [SerializeField] private AudioListener audioListener;
@@ -51,7 +59,7 @@ public class Player : NetworkBehaviour
         {
             Debug.Log("[Player] CapsuleCollider가 없어서 Inspector 값 확인 불가");
         }
-        
+
         // Rigidbody 추가 및 설정 (물리 적용)
         var rb = GetComponent<Rigidbody>();
         if (rb == null)
@@ -59,14 +67,14 @@ public class Player : NetworkBehaviour
             rb = gameObject.AddComponent<Rigidbody>();
             Debug.Log("[Player] Rigidbody 추가됨");
         }
-        
+
         // 물리 설정
         rb.mass = 1f;
         rb.drag = 5f; // 공기 저항
         rb.angularDrag = 5f;
         rb.freezeRotation = true; // 물리로 인한 회전 방지
         rb.useGravity = true; // 중력 적용
-        
+
         Debug.Log($"[Player] Rigidbody 설정: mass={rb.mass}, drag={rb.drag}, useGravity={rb.useGravity}");
     }
 
@@ -235,7 +243,7 @@ public class Player : NetworkBehaviour
             if (enableMobileControls && mobileInput != null)
             {
                 Vector2 joystickInput = mobileInput.MovementInput;
-                if (joystickInput != Vector2.zero)
+                if (joystickInput.magnitude > 0.1f) // 임계값 추가로 미세한 터치 무시
                 {
                     hasInput = true;
 
@@ -268,30 +276,31 @@ public class Player : NetworkBehaviour
                 }
             }
 
-            // 카메라 좌우 회전 입력만 확인 (위아래 회전은 제외)
-            bool hasHorizontalCameraInput = false;
+            // 아무 터치 입력이라도 있는지 확인
+            bool hasAnyTouchInput = false;
             if (enableMobileControls && mobileInput != null)
             {
                 Vector2 cameraInput = mobileInput.CameraInput;
-                // X축 움직임이 Y축 움직임보다 2배 이상 클 때 (주로 좌우 회전)
-                hasHorizontalCameraInput = Mathf.Abs(cameraInput.x) > 0.01f &&
-                                         Mathf.Abs(cameraInput.x) > Mathf.Abs(cameraInput.y) * 2f;
+                Vector2 joystickInput = mobileInput.MovementInput;
+                
+                // 조이스틱이나 카메라 중 하나라도 입력이 있으면
+                hasAnyTouchInput = joystickInput.magnitude > 0.05f || cameraInput.magnitude > 0.05f;
 
                 // 디버그 로그 (카메라 입력이 있을 때만)
                 if (Mathf.Abs(cameraInput.x) > 0.01f || Mathf.Abs(cameraInput.y) > 0.01f)
                 {
                     if (Time.time % 1f < Time.deltaTime)
                     {
-                        Debug.Log($"[Player] 카메라 입력 - X: {cameraInput.x:F3}, Y: {cameraInput.y:F3}, 좌우회전 인식: {hasHorizontalCameraInput}");
+                        Debug.Log($"[Player] 카메라 입력 - X: {cameraInput.x:F3}, Y: {cameraInput.y:F3}, 터치 입력: {hasAnyTouchInput}");
                     }
                 }
             }
 
-            // 즉시 반응하는 이동 로직 (이동 또는 카메라 좌우 회전)
-            if ((hasInput && moveDirection != Vector3.zero) || hasHorizontalCameraInput)
+            // 즉시 반응하는 이동 로직 (실제 이동이나 터치 입력이 있을 때)
+            if ((hasInput && moveDirection != Vector3.zero) || hasAnyTouchInput)
             {
-                // 애니메이션: 이동 시작 (실제 이동이나 카메라 회전 시)
-                if (!isMoving)
+                // meet 중이 아닐 때만 move 애니메이션
+                if (!isMoving && !isMeeting)
                 {
                     isMoving = true;
                     TriggerMoveAnimation();
@@ -323,7 +332,7 @@ public class Player : NetworkBehaviour
                 {
                     isMoving = false;
                     TriggerStopAnimation();
-                    
+
                     // Rigidbody 수평 속도 정지
                     var rb = GetComponent<Rigidbody>();
                     if (rb != null)
@@ -341,6 +350,9 @@ public class Player : NetworkBehaviour
             {
                 mobileInput.ApplyCameraRotation();
             }
+
+            // meet 감지 (항상 실행)
+            CheckMeetInteraction();
         }
     }
 
@@ -426,6 +438,58 @@ public class Player : NetworkBehaviour
         if (isLocalPlayer)
         {
             CmdSetAnimationState(0); // idle state
+        }
+    }
+
+    void CheckMeetInteraction()
+    {
+        // meet 중이면 지속시간 체크
+        if (isMeeting)
+        {
+            if (Time.time - meetStartTime >= meetDuration)
+            {
+                // meet 종료
+                isMeeting = false;
+                isMoving = false;
+                lastMeetTime = Time.time; // 쿨다운 시작
+                if (isLocalPlayer)
+                {
+                    CmdSetAnimationState(0); // idle state
+                }
+                Debug.Log("[Player] Meet 종료 - 지속시간 완료");
+                return;
+            }
+        }
+        
+        // 쿨다운 중이면 새로운 meet 감지 안 함
+        if (Time.time - lastMeetTime < meetCooldown)
+        {
+            return;
+        }
+        
+        // 다른 플레이어들과의 거리 체크
+        bool foundNearbyPlayer = false;
+        Player[] allPlayers = FindObjectsOfType<Player>();
+
+        foreach (Player otherPlayer in allPlayers)
+        {
+            if (otherPlayer == this) continue; // 자신 제외
+
+            float distance = Vector3.Distance(transform.position, otherPlayer.transform.position);
+            if (distance <= meetDistance)
+            {
+                foundNearbyPlayer = true;
+                break;
+            }
+        }
+
+        // meet 시작 (쿨다운 완료 + 거리 조건 만족)
+        if (foundNearbyPlayer && !isMeeting)
+        {
+            isMeeting = true;
+            meetStartTime = Time.time;
+            TriggerMeetAnimation();
+            Debug.Log($"[Player] Meet 시작 - {meetDuration}초 지속, 다음 쿨다운 {meetCooldown}초");
         }
     }
 
