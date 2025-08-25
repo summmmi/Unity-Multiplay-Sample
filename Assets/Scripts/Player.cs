@@ -17,6 +17,13 @@ public class Player : NetworkBehaviour
     
     private Vector3 smoothedMovement = Vector3.zero;
     private MobileInputManager mobileInput;
+    
+    [Header("Animation")]
+    [SerializeField] private Animator characterAnimator;
+    private bool isMoving = false;
+    
+    [SyncVar(hook = nameof(OnAnimationStateChanged))]
+    private int currentAnimationState = 0; // 0=idle, 1=walk, 2=meet
 
     [Header("Camera Settings")]
     [SerializeField] private Camera playerCamera;
@@ -28,6 +35,7 @@ public class Player : NetworkBehaviour
         Debug.Log($"Player Start() - isServer: {isServer}, isClient: {isClient}, isLocalPlayer: {isLocalPlayer}, netId: {netId}");
         SetupPlayerCamera();
         SetupMobileInput();
+        SetupAnimation();
     }
     
     void SetupMobileInput()
@@ -54,6 +62,27 @@ public class Player : NetworkBehaviour
         else
         {
             Debug.LogWarning($"[Player] 모바일 입력 매니저 연결 실패 - Manager: {mobileInput != null}, Camera: {playerCamera != null}");
+        }
+    }
+    
+    void SetupAnimation()
+    {
+        if (characterAnimator == null)
+        {
+            characterAnimator = GetComponent<Animator>();
+            if (characterAnimator == null)
+            {
+                characterAnimator = GetComponentInChildren<Animator>();
+            }
+        }
+        
+        if (characterAnimator != null)
+        {
+            Debug.Log($"[Player] Animator 연결됨: {characterAnimator.name}");
+        }
+        else
+        {
+            Debug.LogWarning("[Player] Animator를 찾을 수 없습니다!");
         }
     }
 
@@ -208,6 +237,13 @@ public class Player : NetworkBehaviour
             {
                 moveDirection.Normalize();
                 
+                // 애니메이션: 이동 시작
+                if (!isMoving)
+                {
+                    isMoving = true;
+                    TriggerMoveAnimation();
+                }
+                
                 if (smoothMovement && Application.isMobilePlatform)
                 {
                     // 모바일에서는 부드러운 움직임 적용
@@ -233,6 +269,24 @@ public class Player : NetworkBehaviour
                 if (smoothedMovement.magnitude > 0.01f)
                 {
                     transform.position += smoothedMovement * moveSpeed * Time.deltaTime;
+                }
+                else
+                {
+                    // 애니메이션: 정지
+                    if (isMoving)
+                    {
+                        isMoving = false;
+                        TriggerStopAnimation();
+                    }
+                }
+            }
+            else
+            {
+                // 애니메이션: 정지
+                if (isMoving)
+                {
+                    isMoving = false;
+                    TriggerStopAnimation();
                 }
             }
 
@@ -345,6 +399,58 @@ public class Player : NetworkBehaviour
         else
         {
             Debug.LogError("[Player] Global Volume을 찾을 수 없습니다!");
+        }
+    }
+    
+    void TriggerMoveAnimation()
+    {
+        if (isLocalPlayer)
+        {
+            CmdSetAnimationState(1); // walk state
+        }
+    }
+    
+    void TriggerStopAnimation()
+    {
+        if (isLocalPlayer)
+        {
+            CmdSetAnimationState(0); // idle state
+        }
+    }
+    
+    void TriggerMeetAnimation()
+    {
+        if (isLocalPlayer)
+        {
+            CmdSetAnimationState(2); // meet state
+        }
+    }
+    
+    [Command]
+    void CmdSetAnimationState(int newState)
+    {
+        currentAnimationState = newState;
+    }
+    
+    void OnAnimationStateChanged(int oldState, int newState)
+    {
+        if (characterAnimator != null)
+        {
+            switch (newState)
+            {
+                case 0: // idle
+                    characterAnimator.SetTrigger("stop");
+                    Debug.Log("[Player] 네트워크 동기화 애니메이션: stop");
+                    break;
+                case 1: // walk
+                    characterAnimator.SetTrigger("move");
+                    Debug.Log("[Player] 네트워크 동기화 애니메이션: move");
+                    break;
+                case 2: // meet
+                    characterAnimator.SetTrigger("meet");
+                    Debug.Log("[Player] 네트워크 동기화 애니메이션: meet");
+                    break;
+            }
         }
     }
 

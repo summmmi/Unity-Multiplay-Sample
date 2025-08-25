@@ -385,6 +385,14 @@ public class AutoNetworkManager : NetworkManager
 
     public override void OnServerAddPlayer(NetworkConnectionToClient conn)
     {
+        // Arduino Host 연결 확인 - Host의 로컬 연결이면 플레이어 생성하지 않음
+        if (conn.connectionId == 0 && NetworkServer.localConnection == conn && isArduinoConnected)
+        {
+            if (enableDebugLogs)
+                Debug.Log("Arduino Host connection detected - Player character not created");
+            return;
+        }
+
         // 플레이어 스폰 위치 결정
         Transform startPos = GetStartPosition();
         GameObject player = startPos != null ?

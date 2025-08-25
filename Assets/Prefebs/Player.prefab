@@ -371,6 +371,7 @@ MonoBehaviour:
   enableMobileControls: 1
   smoothMovement: 1
   movementSmoothing: 2
+  characterAnimator: {fileID: 0}
   playerCamera: {fileID: 3612037982889307851}
   audioListener: {fileID: 2428639011209652069}
   cameraOffset: {x: 0, y: 1.6, z: 0}
