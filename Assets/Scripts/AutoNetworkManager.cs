@@ -54,7 +54,7 @@ public class AutoNetworkManager : NetworkManager
     {
         // MultiplexTransport를 먼저 설정 (base.Awake() 호출 전에)
         SetupMultiplexTransport();
-        
+
         base.Awake();
     }
 
@@ -150,7 +150,7 @@ public class AutoNetworkManager : NetworkManager
                 telepathyTransport = gameObject.AddComponent<TelepathyTransport>();
             }
         }
-        
+
         if (simpleWebTransport == null)
         {
             simpleWebTransport = gameObject.GetComponent<SimpleWebTransport>();
