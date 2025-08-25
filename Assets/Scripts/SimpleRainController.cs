@@ -234,7 +234,7 @@ public class SimpleRainController : MonoBehaviour
         Debug.Log("[SimpleRainController] 스플래시 풀 생성 완료 (10개)");
     }
     
-    public void OnParticleCollision(Vector3 collisionPoint)
+    public void CreateSplashAtPoint(Vector3 collisionPoint)
     {
         // 충돌 지점에 스플래시 생성
         if (splashPool.Count > 0)

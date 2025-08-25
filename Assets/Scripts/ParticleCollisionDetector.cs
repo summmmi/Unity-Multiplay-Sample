@@ -25,7 +25,7 @@ public class ParticleCollisionDetector : MonoBehaviour
         for (int i = 0; i < numCollisionEvents; i++)
         {
             Vector3 collisionPoint = collisionEvents[i].intersection;
-            rainController.OnParticleCollision(collisionPoint);
+            rainController.CreateSplashAtPoint(collisionPoint);
         }
     }
 }
