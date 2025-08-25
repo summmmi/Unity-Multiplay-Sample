@@ -234,24 +234,47 @@ public class Player : NetworkBehaviour
                 }
             }
             
-            // 즉시 반응하는 이동 로직
-            if (hasInput && moveDirection != Vector3.zero)
+            // 카메라 좌우 회전 입력만 확인 (위아래 회전은 제외)
+            bool hasHorizontalCameraInput = false;
+            if (enableMobileControls && mobileInput != null)
             {
-                // 애니메이션: 이동 시작
+                Vector2 cameraInput = mobileInput.CameraInput;
+                // X축 움직임이 Y축 움직임보다 2배 이상 클 때 (주로 좌우 회전)
+                hasHorizontalCameraInput = Mathf.Abs(cameraInput.x) > 0.01f && 
+                                         Mathf.Abs(cameraInput.x) > Mathf.Abs(cameraInput.y) * 2f;
+                
+                // 디버그 로그 (카메라 입력이 있을 때만)
+                if (Mathf.Abs(cameraInput.x) > 0.01f || Mathf.Abs(cameraInput.y) > 0.01f)
+                {
+                    if (Time.time % 1f < Time.deltaTime)
+                    {
+                        Debug.Log($"[Player] 카메라 입력 - X: {cameraInput.x:F3}, Y: {cameraInput.y:F3}, 좌우회전 인식: {hasHorizontalCameraInput}");
+                    }
+                }
+            }
+            
+            // 즉시 반응하는 이동 로직 (이동 또는 카메라 좌우 회전)
+            if ((hasInput && moveDirection != Vector3.zero) || hasHorizontalCameraInput)
+            {
+                // 애니메이션: 이동 시작 (실제 이동이나 카메라 회전 시)
                 if (!isMoving)
                 {
                     isMoving = true;
                     TriggerMoveAnimation();
                 }
                 
-                // 방향 정규화 후 즉시 이동 (스무딩 없음)
-                moveDirection.Normalize();
-                transform.position += moveDirection * moveSpeed * Time.deltaTime;
-                
-                // 5초마다 위치 로그
-                if (playerCamera != null && Time.time % 5f < Time.deltaTime)
+                // 실제 이동이 있을 때만 위치 변경
+                if (hasInput && moveDirection != Vector3.zero)
                 {
-                    Debug.Log($"[Player] 이동: Player={transform.position}, Camera={playerCamera.transform.position}");
+                    // 방향 정규화 후 즉시 이동 (스무딩 없음)
+                    moveDirection.Normalize();
+                    transform.position += moveDirection * moveSpeed * Time.deltaTime;
+                    
+                    // 5초마다 위치 로그
+                    if (playerCamera != null && Time.time % 5f < Time.deltaTime)
+                    {
+                        Debug.Log($"[Player] 이동: Player={transform.position}, Camera={playerCamera.transform.position}");
+                    }
                 }
             }
             else
@@ -282,8 +305,18 @@ public class Player : NetworkBehaviour
             // 카메라가 플레이어의 자식인지만 확인 (위치는 건드리지 않음)
             if (playerCamera.transform.parent != transform)
             {
+                // 현재 월드 위치 저장
+                Vector3 worldPosition = playerCamera.transform.position;
+                Quaternion worldRotation = playerCamera.transform.rotation;
+                
+                // 부모 설정
                 playerCamera.transform.SetParent(transform);
-                Debug.Log("[Player] 카메라 부모 재설정 (위치는 프리팹 설정 유지)");
+                
+                // 월드 위치/회전 복원 (프리팹의 로컬 위치 유지)
+                playerCamera.transform.position = worldPosition;
+                playerCamera.transform.rotation = worldRotation;
+                
+                Debug.Log($"[Player] 카메라 부모 재설정 - Local: {playerCamera.transform.localPosition}");
             }
             
             // 모바일에서는 MobileInputManager가 카메라 회전을 처리

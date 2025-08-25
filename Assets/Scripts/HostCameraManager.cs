@@ -5,12 +5,15 @@ public class HostCameraManager : NetworkBehaviour
 {
     [Header("Camera Settings")]
     public Camera mainCamera;
-    public Vector3 overviewPosition = new Vector3(0, 5, -10);
-    public Vector3 overviewRotation = new Vector3(30, 0, 0);
-    public float overviewFOV = 60f;
-
+    
     [Header("Optional Settings")]
     public bool enableAudioListener = true;
+    
+    // MainCamera에서 가져올 값들 (Inspector에 표시용)
+    [Header("Current MainCamera Values (Read Only)")]
+    [SerializeField] private Vector3 currentPosition;
+    [SerializeField] private Vector3 currentRotation;
+    [SerializeField] private float currentFOV;
 
     void Start()
     {
@@ -35,12 +38,22 @@ public class HostCameraManager : NetworkBehaviour
             return;
         }
 
+        // MainCamera의 현재 값들을 저장 (Inspector 표시용)
+        currentPosition = mainCamera.transform.position;
+        currentRotation = mainCamera.transform.eulerAngles;
+        currentFOV = mainCamera.fieldOfView;
+
+        Debug.Log($"[HostCameraManager] MainCamera 현재 값들:");
+        Debug.Log($"- 위치: {currentPosition}");
+        Debug.Log($"- 회전: {currentRotation}");
+        Debug.Log($"- FOV: {currentFOV}");
+
         // 서버(호스트)에서만 오버뷰 카메라로 설정
         if (isServer)
         {
             SetupHostOverviewCamera();
             DisablePlayerCameras(); // 호스트에서 플레이어 카메라들 비활성화
-            Debug.Log("호스트 오버뷰 카메라 설정 완료");
+            Debug.Log("호스트 오버뷰 카메라 설정 완료 - MainCamera 값 사용");
         }
         else
         {
@@ -57,12 +70,8 @@ public class HostCameraManager : NetworkBehaviour
     {
         if (mainCamera == null) return;
 
-        // 카메라 위치와 회전 설정 (전체 환경을 내려다보는 뷰)
-        mainCamera.transform.position = overviewPosition;
-        mainCamera.transform.rotation = Quaternion.Euler(overviewRotation);
-
-        // FOV 설정 (넓은 시야각으로)
-        mainCamera.fieldOfView = overviewFOV;
+        // MainCamera의 현재 Transform과 FOV 값을 그대로 사용 (변경하지 않음)
+        // 위치, 회전, FOV는 Scene에서 설정된 MainCamera 값 그대로 유지
 
         // AudioListener 설정 (호스트에서만 활성화)
         AudioListener audioListener = mainCamera.GetComponent<AudioListener>();
@@ -86,10 +95,10 @@ public class HostCameraManager : NetworkBehaviour
         // 카메라가 활성화되도록 확실히 설정
         mainCamera.gameObject.SetActive(true);
 
-        Debug.Log($"호스트 오버뷰 카메라 설정:");
-        Debug.Log($"- 위치: {overviewPosition}");
-        Debug.Log($"- 회전: {overviewRotation}");
-        Debug.Log($"- FOV: {overviewFOV}");
+        Debug.Log($"호스트 오버뷰 카메라 설정 (MainCamera 원본 값 사용):");
+        Debug.Log($"- 위치: {currentPosition}");
+        Debug.Log($"- 회전: {currentRotation}");
+        Debug.Log($"- FOV: {currentFOV}");
     }
 
     void DisablePlayerCameras()
@@ -114,26 +123,17 @@ public class HostCameraManager : NetworkBehaviour
         }
     }
 
-    // Inspector에서 실시간으로 값 변경 테스트용
+    // Inspector에서 MainCamera 값들 표시 업데이트
     protected override void OnValidate()
     {
         base.OnValidate(); // 부모 클래스의 OnValidate 호출
 
-        // Editor에서 안전하게 체크
-        if (Application.isPlaying && mainCamera != null)
+        // Editor에서 MainCamera 값들 업데이트 (표시용)
+        if (mainCamera != null)
         {
-            // NetworkBehaviour가 초기화되었는지 확인
-            try
-            {
-                if (isServer)
-                {
-                    SetupHostOverviewCamera();
-                }
-            }
-            catch (System.NullReferenceException)
-            {
-                // NetworkBehaviour가 아직 초기화되지 않았음 - 무시
-            }
+            currentPosition = mainCamera.transform.position;
+            currentRotation = mainCamera.transform.eulerAngles;
+            currentFOV = mainCamera.fieldOfView;
         }
     }
 }

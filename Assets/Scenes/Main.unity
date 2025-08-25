@@ -488,14 +488,14 @@ Camera:
   serializedVersion: 2
   m_ClearFlags: 1
   m_BackGroundColor: {r: 0, g: 0, b: 0, a: 1}
-  m_projectionMatrixMode: 1
+  m_projectionMatrixMode: 2
   m_GateFitMode: 2
   m_FOVAxisMode: 0
   m_Iso: 200
   m_ShutterSpeed: 0.005
   m_Aperture: 16
   m_FocusDistance: 10
-  m_FocalLength: 50
+  m_FocalLength: 23.051785
   m_BladeCount: 5
   m_Curvature: {x: 2, y: 11}
   m_BarrelClipping: 0.25
@@ -508,11 +508,11 @@ Camera:
     y: 0
     width: 1
     height: 1
-  near clip plane: 0.3
-  far clip plane: 1000
-  field of view: 64.818115
+  near clip plane: 0.01
+  far clip plane: 1000.76
+  field of view: 55.000004
   orthographic: 0
-  orthographic size: 5
+  orthographic size: 16.47
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -536,13 +536,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -12.7769, y: 6, z: -26.59046}
+  m_LocalRotation: {x: 0.40307477, y: 0.123220764, z: -0.054870427, w: 0.90517217}
+  m_LocalPosition: {x: -20.72, y: 31, z: -35.9}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1603115277}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 48.007, y: 15.504, z: 0}
 --- !u!114 &330585547
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1303,7 +1303,8 @@ MonoBehaviour:
   virtualJoystick: {fileID: 883746059}
   playerCamera: {fileID: 0}
   cameraSensitivity: 2
-  cameraVerticalLimit: 60
+  cameraVerticalLimitUp: 80
+  cameraVerticalLimitDown: 60
   invertY: 0
   joystickAreaRadius: 150
 --- !u!1 &883746055
@@ -1786,10 +1787,10 @@ MonoBehaviour:
   syncMode: 0
   syncInterval: 0
   mainCamera: {fileID: 330585545}
-  overviewPosition: {x: 0, y: 5, z: -5}
-  overviewRotation: {x: 20, y: 0, z: 0}
-  overviewFOV: 60
   enableAudioListener: 1
+  currentPosition: {x: -7.943099, y: 34.540955, z: -33.509537}
+  currentRotation: {x: 48.006992, y: 15.504005, z: -0.0000006380588}
+  currentFOV: 67
 --- !u!114 &1054737232
 MonoBehaviour:
   m_ObjectHideFlags: 0
