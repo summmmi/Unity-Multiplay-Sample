@@ -11,6 +11,10 @@ public class AutoNetworkManager : NetworkManager
     [SerializeField] private string[] arduinoPortPatterns = { "COM", "tty.usb", "tty.wchusbserial" };
     [SerializeField] private int telepathyPort = 7778;
     [SerializeField] private int simpleWebPort = 7779;
+    
+    [Header("Local Network Settings")]
+    [Tooltip("로컬 네트워크 IP 주소 (예: 192.168.1.100)")]
+    [SerializeField] private string localServerAddress = "192.168.219.105";
 
     [Header("MultiplexTransport Settings")]
     [SerializeField] private MultiplexTransport multiplexTransport;
@@ -332,6 +336,12 @@ public class AutoNetworkManager : NetworkManager
 
         if (!NetworkClient.active)
         {
+            // 로컬 네트워크 IP로 연결
+            networkAddress = localServerAddress;
+            
+            if (enableDebugLogs)
+                Debug.Log($"[Local Network] Connecting to: {networkAddress}");
+            
             StartClient();
         }
     }
