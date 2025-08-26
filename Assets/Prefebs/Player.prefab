@@ -116,8 +116,8 @@ MonoBehaviour:
     m_Bits: 1
   m_VolumeTrigger: {fileID: 0}
   m_VolumeFrameworkUpdateModeOption: 2
-  m_RenderPostProcessing: 0
-  m_Antialiasing: 0
+  m_RenderPostProcessing: 1
+  m_Antialiasing: 1
   m_AntialiasingQuality: 2
   m_StopNaN: 0
   m_Dithering: 0
@@ -310,6 +310,9 @@ MonoBehaviour:
   moveSpeed: 3
   enableMobileControls: 1
   characterAnimator: {fileID: 0}
+  meetDistance: 2
+  meetDuration: 3
+  meetCooldown: 5
   playerCamera: {fileID: 1782186031330017966}
   audioListener: {fileID: 6244873710434370616}
   cameraOffset: {x: 0, y: 1.6, z: 0}
