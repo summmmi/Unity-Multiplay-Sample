@@ -94,7 +94,7 @@ public class SimpleRainController : MonoBehaviour
         if (enableFog)
         {
             RenderSettings.fog = true;
-            RenderSettings.fogColor = fogColor;
+            RenderSettings.fogColor = new Color(0.8f, 0.85f, 0.9f, 1f); // 덜 어둡게
             RenderSettings.fogMode = FogMode.ExponentialSquared;
             RenderSettings.fogDensity = fogDensity;
         }

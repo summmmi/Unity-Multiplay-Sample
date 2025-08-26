@@ -45,13 +45,18 @@ public class SkyboxController : MonoBehaviour
         
         Debug.Log($"✅ Skybox Materials loaded: {loadedCount}/2");
         
-        // 각 스카이박스의 원래 Exposure 값 저장
-        for (int i = 0; i < skyboxMaterials.Length; i++)
+        // 각 스카이박스의 원래 Exposure 값 저장 및 초기화
+        for (int i = 0; i < skyboxMaterials.Length && i < originalExposureValues.Length; i++)
         {
             if (skyboxMaterials[i] != null)
             {
-                originalExposureValues[i] = skyboxMaterials[i].GetFloat("_Exposure");
-                Debug.Log($"💾 Original Exposure[{i}]: {originalExposureValues[i]}");
+                // Inspector 기본값 설정
+                if (i == 0) originalExposureValues[i] = 1.1f;  // Sunny
+                else if (i == 1) originalExposureValues[i] = 0.5f;  // Dark
+                
+                // 시작시 원래 값으로 리셋
+                skyboxMaterials[i].SetFloat("_Exposure", originalExposureValues[i]);
+                Debug.Log($"💾 Reset Exposure[{i}] to default: {originalExposureValues[i]}");
             }
         }
     }
@@ -108,6 +113,35 @@ public class SkyboxController : MonoBehaviour
     }
     
     private Coroutine currentTransition = null;
+    
+    void OnDestroy()
+    {
+        ResetAllSkyboxesToDefault();
+    }
+    
+    void OnApplicationQuit()
+    {
+        ResetAllSkyboxesToDefault();
+    }
+    
+    void OnApplicationPause(bool pauseStatus)
+    {
+        if (pauseStatus)
+            ResetAllSkyboxesToDefault();
+    }
+    
+    public void ResetAllSkyboxesToDefault()
+    {
+        // 모든 스카이박스 원래 값으로 리셋
+        for (int i = 0; i < skyboxMaterials.Length; i++)
+        {
+            if (skyboxMaterials[i] != null && i < originalExposureValues.Length)
+            {
+                skyboxMaterials[i].SetFloat("_Exposure", originalExposureValues[i]);
+                Debug.Log($"🔄 Reset Skybox[{i}] Exposure to: {originalExposureValues[i]}");
+            }
+        }
+    }
     
     public void ApplySkyboxAndLighting(int weatherStage)
     {

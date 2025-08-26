@@ -51,11 +51,26 @@ public class ChangeEnviroment : NetworkBehaviour
 
         InitializeControllers();
         InitializeWeatherSystem();
+        InitializeLightning();
         InitializeWind();
         InitializeFog();
 
         // Store original values
         StoreOriginalValues();
+        
+        // Set initial rain intensity (very light rain)
+        if (rainController != null)
+        {
+            SetRainIntensity(1f); // Start with very light rain
+            Debug.Log("🌧️ Initial rain intensity set to 1 (very light rain)");
+        }
+        
+        // Make sure lightning is OFF initially
+        if (lightningFlash != null)
+        {
+            lightningFlash.StopLightning();
+            Debug.Log("⚡ Lightning explicitly stopped on start");
+        }
 
         Debug.Log("✅ All environment systems initialized");
     }
@@ -120,6 +135,57 @@ public class ChangeEnviroment : NetworkBehaviour
         else
         {
             Debug.LogWarning("⚠️ Rain Controller not found");
+        }
+    }
+    
+    void InitializeLightning()
+    {
+        if (lightningFlash == null)
+        {
+            lightningFlash = FindObjectOfType<LightningFlash>();
+        }
+        
+        // LightningFlash가 없으면 생성
+        if (lightningFlash == null)
+        {
+            GameObject lightningSystem = new GameObject("Lightning System");
+            lightningFlash = lightningSystem.AddComponent<LightningFlash>();
+            
+            // AudioSource 추가 및 설정
+            AudioSource thunderAudio = lightningSystem.AddComponent<AudioSource>();
+            thunderAudio.playOnAwake = false;
+            thunderAudio.spatialBlend = 0f; // 2D sound
+            thunderAudio.volume = 1.0f;
+            
+            // 천둥 소리 로드
+            AudioClip thunderClip = Resources.Load<AudioClip>("Audio/InspectorJ - Cold Weather - Single Clap of Thunder with Rain");
+            if (thunderClip == null)
+            {
+                thunderClip = Resources.Load<AudioClip>("Audio/Soundholder - ambient thunder clap distant with rain ");
+            }
+            
+            if (thunderClip != null)
+            {
+                thunderAudio.clip = thunderClip;
+                Debug.Log($"✅ Thunder sound loaded: {thunderClip.name}");
+            }
+            else
+            {
+                Debug.LogWarning("⚠️ Thunder sound clips not found in Resources/Audio/");
+            }
+            
+            // LightningFlash 컴포넌트 설정
+            lightningFlash.thunder = thunderAudio;
+            lightningFlash.sun = FindObjectOfType<Light>();
+            
+            Debug.Log("✅ Lightning System created dynamically");
+        }
+        
+        if (lightningFlash != null)
+        {
+            // 처음엔 비활성화
+            lightningFlash.enabled = false;
+            Debug.Log("✅ Lightning Flash initialized (disabled)");
         }
     }
 
@@ -203,6 +269,7 @@ public class ChangeEnviroment : NetworkBehaviour
     {
         ApplyControllersChanges();
         ApplyWeatherChanges();
+        ApplyLightningChanges();
         ApplyWindChanges();
 
         Debug.Log($"✅ All environment changes applied - Button count: {buttonPressCount}");
@@ -242,27 +309,47 @@ public class ChangeEnviroment : NetworkBehaviour
     {
         int weatherStage = GetWeatherStage(); // 0-3 stages
 
-        // 3단계 시스템으로 비 강도 설정 - 값 대폭 증가
+        // 3단계 시스템으로 비 강도 설정
         float newRainIntensity = 0f;
         switch (weatherStage)
         {
             case 0:
-                newRainIntensity = 0f; // 비 없음
+                newRainIntensity = 1f; // 아주 가벼운 비
                 break;
             case 1:
-                newRainIntensity = 5f; // 약한 비 (2 → 5)
+                newRainIntensity = 1f; // 약한 비
                 break;
             case 2:
-                newRainIntensity = 15f; // 보통 비 (5 → 15)
+                newRainIntensity = 15f; // 보통 비
                 break;
             case 3:
-                newRainIntensity = 30f; // 강한 비/폭우 (10 → 30)
+                newRainIntensity = 30f; // 강한 비/폭우
                 break;
         }
 
         SetRainIntensity(newRainIntensity);
 
         Debug.Log($"🌧️ Weather [Stage {weatherStage}/3] - Rain intensity: {newRainIntensity}");
+    }
+
+    private void ApplyLightningChanges()
+    {
+        int weatherStage = GetWeatherStage();
+        
+        if (lightningFlash != null)
+        {
+            // Stage 3에서만 천둥 활성화
+            if (weatherStage == 3)
+            {
+                lightningFlash.StartLightning();
+                Debug.Log("⚡ Lightning started for storm stage");
+            }
+            else
+            {
+                lightningFlash.StopLightning();
+                Debug.Log("⚡ Lightning stopped");
+            }
+        }
     }
 
     // private void ApplyFogChanges()

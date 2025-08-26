@@ -5,32 +5,46 @@ public class LightningFlash : MonoBehaviour
 {
     [Header("References")]
     public Light sun;             // Sun(Directional Light)
-    public Light flashLight;      // ¹ø°³ Àü¿ë ¶óÀÌÆ®(= LightningLight, ±âº» OFF)
-    public AudioSource thunder;   // ¹ø°³ ¼Ò¸® Audio Source(Å¬¸³ ÇÒ´ç)
+    public Light flashLight;      // Flash light for lightning (default OFF)
+    public AudioSource thunder;   // Thunder sound Audio Source
 
-    [Header("Timing (·¹º§3 ±ÇÀå: 8~14ÃÊ)")]
+    [Header("Timing")]
     public float minInterval = 8f;
     public float maxInterval = 14f;
 
-    [Header("Burst (¿¬¼Ó ¹øÂ½)")]
-    public int minFlashesPerBurst = 1;   // 1~2 ±ÇÀå
+    [Header("Burst Settings")]
+    public int minFlashesPerBurst = 1;   // 1-2 flashes
     public int maxFlashesPerBurst = 2;
-    public float interFlashGap = 0.12f; // ¿¬¼Ó ¹øÂ½ »çÀÌ °£°İ(ÃÊ)
+    public float interFlashGap = 0.12f; // Gap between flashes
 
-    [Header("Flash (Light) - ¹Ù´Ú/¿ÀºêÁ§Æ® ¹øÂ½")]
-    public float flashDuration = 0.12f;    // ¶óÀÌÆ® ±ôºı ½Ã°£(0.10~0.16)
-    public float sunFlashIntensity = 2.0f; // flashLight ¾øÀ» ¶§ Sun ÀÓ½Ã ¼¼±â
-    public float sunRecoverIntensity = 0.35f; // ·¹º§3 Sun ±âº» ¼¼±â¿Í ¸ÂÃã
+    [Header("Flash Light Settings")]
+    public float flashDuration = 0.2f;    // Light flash duration (increased)
+    public float flashLightIntensity = 50f; // Flash light intensity (very bright)
+    public float sunFlashIntensity = 3.0f; // Temporary sun intensity (increased)
+    public float sunRecoverIntensity = 0.35f; // Stage 3 sun default
 
-    [Header("Flash (Skybox) - ÇÏ´Ã ¹øÂ½")]
-    public bool flashSkybox = true;           // ÇÏ´Ã ¹øÂ½ ON/OFF
-    public float skyboxExposureBoost = 1.50f;  // ¼¼±â(1.35~1.55)
-    public float skyboxFlashDuration = 0.18f;  // Áö¼Ó(0.12~0.20)
+    [Header("Flash Skybox Settings")]
+    public bool flashSkybox = true;           // Skybox flash ON/OFF
+    public float skyboxExposureBoost = 2.5f;  // Exposure boost (increased for visibility)
+    public float skyboxFlashDuration = 0.25f;  // Duration (increased)
 
     [Header("Audio")]
-    [Range(0f, 1.5f)] public float thunderVolume = 1.0f;  // ÀÎ½ºÆåÅÍ¿¡¼­ º¼·ı Á¶Àı
+    [Range(0f, 1.5f)] public float thunderVolume = 1.0f;  // Volume control
 
-    void OnEnable() { StartCoroutine(MainLoop()); }
+    [Header("Control")]
+    public bool isActive = false; // External control
+    
+    void Start() 
+    { 
+        // Startì—ì„œëŠ” ì ˆëŒ€ MainLoop ì‹œì‘í•˜ì§€ ì•ŠìŒ
+        // ì˜¤ì§ StartLightning()ì—ì„œë§Œ ì‹œì‘
+        Debug.Log($"âš¡ LightningFlash Start() - isActive: {isActive}");
+    }
+    
+    void OnEnable() 
+    { 
+        // OnEnableì—ì„œëŠ” ì•„ë¬´ê²ƒë„ í•˜ì§€ ì•ŠìŒ - Startì—ì„œ ì²˜ë¦¬
+    }
     void OnDisable() { StopAllCoroutines(); }
 
     IEnumerator MainLoop()
@@ -38,12 +52,12 @@ public class LightningFlash : MonoBehaviour
         while (true)
         {
             yield return new WaitForSeconds(Random.Range(minInterval, maxInterval));
-            yield return StartCoroutine(DoBurst());   // ¿¬¼Ó ¹øÂ½
+            yield return StartCoroutine(DoBurst());   // Flash burst
 
             if (thunder != null)
             {
                 thunder.volume = thunderVolume;
-                thunder.PlayDelayed(Random.Range(0.2f, 0.5f)); // »ìÂ¦ Áö¿¬
+                thunder.PlayDelayed(Random.Range(0.2f, 0.5f)); // Slight delay
             }
         }
     }
@@ -53,13 +67,13 @@ public class LightningFlash : MonoBehaviour
         int count = Random.Range(minFlashesPerBurst, maxFlashesPerBurst + 1);
         for (int i = 0; i < count; i++)
         {
-            // ÇÑ ¹ø ¹øÂ½(¶óÀÌÆ® + ½ºÄ«ÀÌ¹Ú½º)
+            // Single flash (light + skybox)
             Coroutine lc = StartCoroutine(FlashLightOnce());
             Coroutine sc = flashSkybox ? StartCoroutine(FlashSkyboxOnce()) : null;
             if (lc != null) yield return lc;
             if (sc != null) yield return sc;
 
-            // ´ÙÀ½ ¹øÂ½±îÁö Àá±ñ ½° (¸¶Áö¸·Àº ½° ¾øÀ½)
+            // Gap between multiple flashes
             if (i < count - 1)
                 yield return new WaitForSeconds(interFlashGap);
         }
@@ -69,14 +83,27 @@ public class LightningFlash : MonoBehaviour
     {
         if (flashLight != null)
         {
-            // Àü¿ë ¶óÀÌÆ®¸¦ Àá±ñ Ä×´Ù°¡ ²û
+            // Random position for lightning
+            Vector3 originalPos = flashLight.transform.position;
+            float randomX = Random.Range(-20f, 20f);
+            float randomY = Random.Range(15f, 20f);  // Height variation
+            float randomZ = Random.Range(-20f, 20f);
+            flashLight.transform.position = new Vector3(randomX, randomY, randomZ);
+            
+            // Flash light on and off with high intensity
+            float originalIntensity = flashLight.intensity;
+            flashLight.intensity = flashLightIntensity;
             flashLight.enabled = true;
             yield return new WaitForSeconds(flashDuration);
             flashLight.enabled = false;
+            flashLight.intensity = originalIntensity;
+            
+            // Restore original position
+            flashLight.transform.position = originalPos;
             yield break;
         }
 
-        // Àü¿ë ¶óÀÌÆ® ¾øÀ¸¸é Sun °­µµ ±ôºı(Æú¹é)
+        // If no flash light, use Sun intensity
         if (sun != null)
         {
             float org = sun.intensity;
@@ -124,7 +151,20 @@ public class LightningFlash : MonoBehaviour
         }
     }
 
-    // ¿¡µğÅÍ¿¡¼­ Áï½Ã Å×½ºÆ®
+    // Inspector test function
+    public void StartLightning()
+    {
+        isActive = true;
+        StopAllCoroutines();
+        StartCoroutine(MainLoop());
+    }
+    
+    public void StopLightning()
+    {
+        isActive = false;
+        StopAllCoroutines();
+    }
+
     [ContextMenu("Test: Flash now")]
     void _TestFlashNow()
     {
@@ -140,6 +180,6 @@ public class LightningFlash : MonoBehaviour
             thunder.volume = thunderVolume;
             thunder.Play();
         }
-        StartCoroutine(MainLoop());
+        // MainLoop ë‹¤ì‹œ ì‹œì‘í•˜ì§€ ì•ŠìŒ - í…ŒìŠ¤íŠ¸ í•œë²ˆë§Œ
     }
 }
