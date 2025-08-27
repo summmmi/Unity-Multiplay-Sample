@@ -256,8 +256,8 @@ public class MobileInputManager : MonoBehaviour
         // 감도 조정 (WebGL에서 더 민감하게)
         float sensitivity = Application.platform == RuntimePlatform.WebGLPlayer ? 200f : 100f;
         
-        // 수평 회전 (플레이어 Y축 회전)
-        float mouseX = CameraInput.x * sensitivity * Time.deltaTime;
+        // 수평 회전 (플레이어 Y축 회전) - X축 방향 반전
+        float mouseX = CameraInput.x * sensitivity * Time.deltaTime * -1f; // -1f 곱해서 방향 반전
         if (cameraTransform.parent != null)
         {
             cameraTransform.parent.Rotate(Vector3.up * mouseX);

@@ -78,8 +78,27 @@ PrefabInstance:
       propertyPath: m_Name
       value: mushroom
       objectReference: {fileID: 0}
+    - target: {fileID: 6317578925029434746, guid: a25b1d2a9c77243e6aa95abadcc1678c,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: -6478536213147159724, guid: a25b1d2a9c77243e6aa95abadcc1678c,
+        type: 3}
+    - target: {fileID: 7202271454713460447, guid: a25b1d2a9c77243e6aa95abadcc1678c,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 4874126678125670354, guid: a25b1d2a9c77243e6aa95abadcc1678c,
+        type: 3}
+    - target: {fileID: 8730303016566787287, guid: a25b1d2a9c77243e6aa95abadcc1678c,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 4874126678125670354, guid: a25b1d2a9c77243e6aa95abadcc1678c,
+        type: 3}
     m_RemovedComponents: []
-    m_RemovedGameObjects: []
+    m_RemovedGameObjects:
+    - {fileID: 65702495048144492, guid: a25b1d2a9c77243e6aa95abadcc1678c, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: a25b1d2a9c77243e6aa95abadcc1678c,
@@ -93,7 +112,7 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: a25b1d2a9c77243e6aa95abadcc1678c,
         type: 3}
       insertIndex: -1
-      addedObject: {fileID: 6501132569976848161}
+      addedObject: {fileID: 2808498436580474205}
   m_SourcePrefab: {fileID: 100100000, guid: a25b1d2a9c77243e6aa95abadcc1678c, type: 3}
 --- !u!1 &7872187117573284085 stripped
 GameObject:
@@ -144,9 +163,9 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 4874126678125670354, guid: a25b1d2a9c77243e6aa95abadcc1678c, type: 3}
-  - {fileID: -3846018093981099296, guid: a25b1d2a9c77243e6aa95abadcc1678c, type: 3}
   - {fileID: -6478536213147159724, guid: a25b1d2a9c77243e6aa95abadcc1678c, type: 3}
+  - {fileID: -3846018093981099296, guid: a25b1d2a9c77243e6aa95abadcc1678c, type: 3}
+  - {fileID: 4874126678125670354, guid: a25b1d2a9c77243e6aa95abadcc1678c, type: 3}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -168,11 +187,11 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!33 &6501132569976848161
+--- !u!33 &2808498436580474205
 MeshFilter:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7872187117573284085}
-  m_Mesh: {fileID: 3447038591770236762, guid: a25b1d2a9c77243e6aa95abadcc1678c, type: 3}
+  m_Mesh: {fileID: 4711208715938537054, guid: a25b1d2a9c77243e6aa95abadcc1678c, type: 3}

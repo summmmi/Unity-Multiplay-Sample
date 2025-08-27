@@ -60,8 +60,8 @@ public class Player : NetworkBehaviour
         {
             var terrain = Terrain.activeTerrain;
 
-            terrain.detailObjectDistance = 100f;
-            terrain.detailObjectDensity = 0.6f;
+            terrain.detailObjectDistance = 80f;
+            terrain.detailObjectDensity = 0.55f;
             terrain.treeDistance = 100f;
             terrain.drawTreesAndFoliage = true;
 

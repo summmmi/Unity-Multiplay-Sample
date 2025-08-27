@@ -8,31 +8,36 @@ public class SimpleRainController : MonoBehaviour
     public GameObject rainPrefab; // HQRainDistortDetailedTorrential
     public GameObject splashPrefab; // RainDistortFlatRipples  
     public GameObject fogPrefab; // RainWhiteSmoky
-    
+
     [Header("Settings")]
     public bool followPlayer = true;
     public float heightOffset = 15f;
-    
+
     [Header("Fog")]
     public bool enableFog = true;
     public Color fogColor = new Color(0.5f, 0.5f, 0.6f, 1f);
     [Range(0f, 0.05f)]
     public float fogDensity = 0.02f;
-    
+
     [Header("Audio")]
     public AudioSource audioSource;
     [Range(0f, 1f)]
     public float volume = 0.4f;
     
+    [Header("Rain Intensity Settings")]
+    [SerializeField] private int currentRainStage = 1;
+    [Range(1, 5)]
+    public int maxRainStages = 5;
+
     public GameObject rainInstance; // public으로 변경 (ChangeEnvironment에서 접근용)
     private GameObject splashInstance;
     private GameObject fogInstance;
     private Transform playerTarget;
-    
+
     // 스플래시 풀링
     private Queue<GameObject> splashPool = new Queue<GameObject>();
     private List<GameObject> activeSplashes = new List<GameObject>();
-    
+
     void Start()
     {
         CreateRainEffects();
@@ -40,7 +45,7 @@ public class SimpleRainController : MonoBehaviour
         SetupAudio();
         FindPlayer();
     }
-    
+
     void CreateRainEffects()
     {
         // 비 프리팹 그대로 생성 (설정 건드리지 않음)
@@ -48,7 +53,7 @@ public class SimpleRainController : MonoBehaviour
         {
             rainInstance = Instantiate(rainPrefab);
             rainInstance.name = "Rain_Instance";
-            
+
             // 메인 비에 충돌 감지 활성화 (바닥 스플래시용)
             ParticleSystem[] rainParticles = rainInstance.GetComponentsInChildren<ParticleSystem>();
             foreach (ParticleSystem ps in rainParticles)
@@ -57,11 +62,13 @@ public class SimpleRainController : MonoBehaviour
                 collision.enabled = true;
                 collision.type = ParticleSystemCollisionType.World;
                 collision.mode = ParticleSystemCollisionMode.Collision3D;
-                collision.dampen = 0.8f;
-                collision.bounce = 0.1f;
-                collision.lifetimeLoss = 0.9f;
-                collision.radiusScale = 0.1f;
                 
+                // 충돌 시 바닥에서 흩어지도록 설정 (반사 방지)
+                collision.dampen = 1.0f; // 완전히 속도 감소
+                collision.bounce = 0.0f; // 반사 없음
+                collision.lifetimeLoss = 1.0f; // 충돌 시 즉시 소멸
+                collision.radiusScale = 0.1f;
+
                 // 충돌 이벤트 리스너 추가
                 ParticleCollisionDetector detector = ps.gameObject.GetComponent<ParticleCollisionDetector>();
                 if (detector == null)
@@ -70,16 +77,16 @@ public class SimpleRainController : MonoBehaviour
                 }
                 detector.rainController = this;
             }
-            
+
             // 스플래시 풀 생성
             CreateSplashPool();
-            
+
             Debug.Log("[SimpleRainController] 비 프리팹 생성 완료 - 충돌 감지 활성화");
         }
-        
+
         // 스플래시는 비 충돌로 자동 생성되므로 별도 생성 안 함
         // if (splashPrefab != null) - 제거
-        
+
         // 안개 프리팹 생성 (원래대로 복구, 하지만 설정은 건드리지 않음)
         if (fogPrefab != null)
         {
@@ -88,7 +95,7 @@ public class SimpleRainController : MonoBehaviour
             Debug.Log("[SimpleRainController] 안개 프리팹 생성 완료 - 원본 설정 유지");
         }
     }
-    
+
     void SetupFog()
     {
         if (enableFog)
@@ -99,14 +106,14 @@ public class SimpleRainController : MonoBehaviour
             RenderSettings.fogDensity = fogDensity;
         }
     }
-    
+
     void SetupAudio()
     {
         if (audioSource == null)
         {
             audioSource = gameObject.AddComponent<AudioSource>();
         }
-        
+
         // 사운드가 Inspector에서 할당되지 않았으면 자동 로드 시도 (에디터에서만)
         if (audioSource.clip == null)
         {
@@ -128,7 +135,7 @@ public class SimpleRainController : MonoBehaviour
             }
 #endif
         }
-        
+
         if (audioSource.clip != null)
         {
             audioSource.loop = true;
@@ -142,7 +149,7 @@ public class SimpleRainController : MonoBehaviour
             Debug.LogWarning("[SimpleRainController] Inspector에서 Audio Source에 rain_loop.wav를 직접 할당해주세요");
         }
     }
-    
+
     void FindPlayer()
     {
         // LocalPlayer 찾기
@@ -156,7 +163,7 @@ public class SimpleRainController : MonoBehaviour
                 return;
             }
         }
-        
+
         // MainCamera 사용
         Camera mainCam = Camera.main;
         if (mainCam != null)
@@ -165,7 +172,7 @@ public class SimpleRainController : MonoBehaviour
             Debug.Log("[SimpleRainController] MainCamera 사용");
         }
     }
-    
+
     void Update()
     {
         // 플레이어 없으면 찾기 시도
@@ -173,26 +180,26 @@ public class SimpleRainController : MonoBehaviour
         {
             FindPlayer();
         }
-        
+
         // 비와 스플래시를 플레이어 위치로 이동
         if (followPlayer && playerTarget != null)
         {
             Vector3 targetPos = playerTarget.position;
-            
+
             if (rainInstance != null)
             {
                 rainInstance.transform.position = targetPos + Vector3.up * heightOffset;
             }
-            
+
             // 스플래시는 비 충돌로 자동 생성됨
-            
+
             if (fogInstance != null)
             {
                 // 안개는 좀 더 낮은 높이에서 퍼지도록
                 fogInstance.transform.position = targetPos + Vector3.up * 2f;
             }
         }
-        
+
         // 안개 유지
         if (enableFog && !RenderSettings.fog)
         {
@@ -200,7 +207,7 @@ public class SimpleRainController : MonoBehaviour
             RenderSettings.fogDensity = fogDensity;
         }
     }
-    
+
     // Public Methods
     public void ToggleRain()
     {
@@ -208,19 +215,19 @@ public class SimpleRainController : MonoBehaviour
         {
             rainInstance.SetActive(!rainInstance.activeInHierarchy);
         }
-        
+
         // 스플래시는 비 충돌로 자동 생성됨
-        
+
         if (fogInstance != null)
         {
             fogInstance.SetActive(!fogInstance.activeInHierarchy);
         }
     }
-    
+
     void CreateSplashPool()
     {
         if (splashPrefab == null) return;
-        
+
         // 스플래시 풀 생성 (10개)
         for (int i = 0; i < 10; i++)
         {
@@ -230,10 +237,10 @@ public class SimpleRainController : MonoBehaviour
             splash.transform.SetParent(transform);
             splashPool.Enqueue(splash);
         }
-        
+
         Debug.Log("[SimpleRainController] 스플래시 풀 생성 완료 (10개)");
     }
-    
+
     public void CreateSplashAtPoint(Vector3 collisionPoint)
     {
         // 충돌 지점에 스플래시 생성
@@ -243,16 +250,16 @@ public class SimpleRainController : MonoBehaviour
             splash.transform.position = collisionPoint + Vector3.up * 0.05f;
             splash.SetActive(true);
             activeSplashes.Add(splash);
-            
+
             // 3초 후 풀로 반환 (더 오래 유지)
             StartCoroutine(ReturnSplashToPool(splash, 3f));
         }
     }
-    
+
     System.Collections.IEnumerator ReturnSplashToPool(GameObject splash, float delay)
     {
         yield return new WaitForSeconds(delay);
-        
+
         if (splash != null)
         {
             splash.SetActive(false);
@@ -260,13 +267,137 @@ public class SimpleRainController : MonoBehaviour
             splashPool.Enqueue(splash);
         }
     }
-    
+
     public void SetVolume(float newVolume)
     {
         volume = newVolume;
         if (audioSource != null)
         {
             audioSource.volume = volume;
+        }
+    }
+    
+    /// <summary>
+    /// 비 강도 단계 설정 (1~5단계)
+    /// 단계가 높을수록 비가 많이 내리고 lifetime이 짧아짐
+    /// </summary>
+    public void SetRainStage(int stage)
+    {
+        currentRainStage = Mathf.Clamp(stage, 1, maxRainStages);
+        UpdateRainIntensity();
+    }
+    
+    /// <summary>
+    /// 현재 단계에 따라 비 강도와 lifetime 조정
+    /// </summary>
+    void UpdateRainIntensity()
+    {
+        if (rainInstance == null) return;
+        
+        ParticleSystem[] rainParticles = rainInstance.GetComponentsInChildren<ParticleSystem>();
+        
+        // 단계별 설정 계산 (foreach 밖에서 계산)
+        float intensityMultiplier = currentRainStage; // 1x ~ 5x
+        float lifetimeReduction = 1.0f - (currentRainStage * 0.15f); // 1.0 ~ 0.25 (85% ~ 25% lifetime)
+        lifetimeReduction = Mathf.Max(lifetimeReduction, 0.2f); // 최소 20% lifetime 보장
+        
+        foreach (ParticleSystem ps in rainParticles)
+        {
+            var main = ps.main;
+            var emission = ps.emission;
+            var collision = ps.collision;
+            
+            // Emission 강도 증가 - 안전한 방식
+            try
+            {
+                var rate = emission.rateOverTime;
+                float baseRate = 50f; // 기본 emission rate (더 안전한 값)
+                
+                if (rate.mode == ParticleSystemCurveMode.Constant)
+                {
+                    emission.rateOverTime = baseRate * intensityMultiplier;
+                }
+                else
+                {
+                    // 다른 모드의 경우 현재 값 기준으로 조정
+                    float currentRate = rate.constant;
+                    emission.rateOverTime = currentRate * intensityMultiplier;
+                }
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"[SimpleRainController] Emission 설정 중 오류: {e.Message}");
+            }
+            
+            // Lifetime 감소 (비가 많을수록 빨리 사라짐) - 안전한 방식
+            try
+            {
+                var lifetime = main.startLifetime;
+                if (lifetime.mode == ParticleSystemCurveMode.Constant)
+                {
+                    main.startLifetime = lifetime.constant * lifetimeReduction;
+                }
+                else if (lifetime.mode == ParticleSystemCurveMode.TwoConstants)
+                {
+                    main.startLifetime = new ParticleSystem.MinMaxCurve(
+                        lifetime.constantMin * lifetimeReduction,
+                        lifetime.constantMax * lifetimeReduction
+                    );
+                }
+                else
+                {
+                    // 다른 모드의 경우 기본값 설정
+                    main.startLifetime = 2.0f * lifetimeReduction;
+                }
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"[SimpleRainController] Lifetime 설정 중 오류: {e.Message}");
+            }
+            
+            // 충돌 설정 강화 (단계가 높을수록 즉시 소멸)
+            collision.lifetimeLoss = Mathf.Min(1.0f, 0.5f + (currentRainStage * 0.1f));
+            collision.dampen = Mathf.Min(1.0f, 0.8f + (currentRainStage * 0.04f));
+            collision.bounce = 0.0f; // 항상 반사 없음
+        }
+        
+        // 오디오 볼륨도 단계에 따라 조정
+        if (audioSource != null)
+        {
+            float volumeMultiplier = 1.0f + (currentRainStage - 1) * 0.2f; // 1.0 ~ 1.8x
+            audioSource.volume = Mathf.Min(volume * volumeMultiplier, 1.0f);
+        }
+        
+        Debug.Log($"[SimpleRainController] 비 강도 {currentRainStage}단계로 설정 - Lifetime: {lifetimeReduction:F2}x, Emission: {intensityMultiplier}x");
+    }
+    
+    /// <summary>
+    /// 현재 비 단계 반환
+    /// </summary>
+    public int GetCurrentRainStage()
+    {
+        return currentRainStage;
+    }
+    
+    /// <summary>
+    /// 비 단계 증가
+    /// </summary>
+    public void IncreaseRainStage()
+    {
+        if (currentRainStage < maxRainStages)
+        {
+            SetRainStage(currentRainStage + 1);
+        }
+    }
+    
+    /// <summary>
+    /// 비 단계 감소
+    /// </summary>
+    public void DecreaseRainStage()
+    {
+        if (currentRainStage > 1)
+        {
+            SetRainStage(currentRainStage - 1);
         }
     }
 }

@@ -11,11 +11,11 @@ public class ChangeEnviroment : NetworkBehaviour
     [Header("=== Environment Controllers ===")]
     public SkyboxController skyboxController;
     public PostProcessController postProcessController;
-    
+
     [Header("Weather")]
     public SimpleRainController rainController;
     public LightningFlash lightningFlash;
-    
+
     [Header("Wind")]
     public WindZone windZone;
 
@@ -57,14 +57,14 @@ public class ChangeEnviroment : NetworkBehaviour
 
         // Store original values
         StoreOriginalValues();
-        
+
         // Set initial rain intensity (very light rain)
         if (rainController != null)
         {
             SetRainIntensity(1f); // Start with very light rain
             Debug.Log("🌧️ Initial rain intensity set to 1 (very light rain)");
         }
-        
+
         // Make sure lightning is OFF initially
         if (lightningFlash != null)
         {
@@ -82,7 +82,7 @@ public class ChangeEnviroment : NetworkBehaviour
         {
             Debug.Log("🔍 Searching for SkyboxController...");
             skyboxController = FindObjectOfType<SkyboxController>();
-            
+
             if (skyboxController == null)
             {
                 Debug.LogError("❌ SkyboxController NOT FOUND in scene! Make sure SkyboxController script is attached to a GameObject.");
@@ -92,13 +92,13 @@ public class ChangeEnviroment : NetworkBehaviour
                 Debug.Log($"✅ SkyboxController found on GameObject: {skyboxController.gameObject.name}");
             }
         }
-        
+
         // Initialize PostProcessController
         if (postProcessController == null)
         {
             Debug.Log("🔍 Searching for PostProcessController...");
             postProcessController = FindObjectOfType<PostProcessController>();
-            
+
             if (postProcessController == null)
             {
                 Debug.LogError("❌ PostProcessController NOT FOUND in scene! Make sure PostProcessController script is attached to a GameObject.");
@@ -108,7 +108,7 @@ public class ChangeEnviroment : NetworkBehaviour
                 Debug.Log($"✅ PostProcessController found on GameObject: {postProcessController.gameObject.name}");
             }
         }
-        
+
         Debug.Log($"📊 Controllers initialization result - Skybox: {skyboxController != null}, PostProcess: {postProcessController != null}");
     }
 
@@ -137,33 +137,33 @@ public class ChangeEnviroment : NetworkBehaviour
             Debug.LogWarning("⚠️ Rain Controller not found");
         }
     }
-    
+
     void InitializeLightning()
     {
         if (lightningFlash == null)
         {
             lightningFlash = FindObjectOfType<LightningFlash>();
         }
-        
+
         // LightningFlash가 없으면 생성
         if (lightningFlash == null)
         {
             GameObject lightningSystem = new GameObject("Lightning System");
             lightningFlash = lightningSystem.AddComponent<LightningFlash>();
-            
+
             // AudioSource 추가 및 설정
             AudioSource thunderAudio = lightningSystem.AddComponent<AudioSource>();
             thunderAudio.playOnAwake = false;
             thunderAudio.spatialBlend = 0f; // 2D sound
             thunderAudio.volume = 1.0f;
-            
+
             // 천둥 소리 로드
             AudioClip thunderClip = Resources.Load<AudioClip>("Audio/InspectorJ - Cold Weather - Single Clap of Thunder with Rain");
             if (thunderClip == null)
             {
                 thunderClip = Resources.Load<AudioClip>("Audio/Soundholder - ambient thunder clap distant with rain ");
             }
-            
+
             if (thunderClip != null)
             {
                 thunderAudio.clip = thunderClip;
@@ -173,14 +173,14 @@ public class ChangeEnviroment : NetworkBehaviour
             {
                 Debug.LogWarning("⚠️ Thunder sound clips not found in Resources/Audio/");
             }
-            
+
             // LightningFlash 컴포넌트 설정
             lightningFlash.thunder = thunderAudio;
             lightningFlash.sun = FindObjectOfType<Light>();
-            
+
             Debug.Log("✅ Lightning System created dynamically");
         }
-        
+
         if (lightningFlash != null)
         {
             // 처음엔 비활성화
@@ -224,7 +224,7 @@ public class ChangeEnviroment : NetworkBehaviour
         RenderSettings.fogMode = FogMode.ExponentialSquared;
         Debug.Log("✅ Fog settings initialized");
     }
-    
+
 
     void StoreOriginalValues()
     {
@@ -274,12 +274,12 @@ public class ChangeEnviroment : NetworkBehaviour
 
         Debug.Log($"✅ All environment changes applied - Button count: {buttonPressCount}");
     }
-    
+
     private void ApplyControllersChanges()
     {
         int weatherStage = GetWeatherStage();
         float gradualProgress = GetGradualProgress();
-        
+
         // Apply skybox and lighting changes
         if (skyboxController != null)
         {
@@ -290,7 +290,7 @@ public class ChangeEnviroment : NetworkBehaviour
         {
             Debug.LogError("❌ SkyboxController is NULL! Cannot apply skybox changes!");
         }
-        
+
         // Apply post processing changes
         if (postProcessController != null)
         {
@@ -300,7 +300,7 @@ public class ChangeEnviroment : NetworkBehaviour
         {
             Debug.LogError("❌ PostProcessController is NULL!");
         }
-        
+
         Debug.Log($"✅ Controllers updated - Weather stage: {weatherStage}, Gradual progress: {gradualProgress:F2}");
     }
 
@@ -320,10 +320,10 @@ public class ChangeEnviroment : NetworkBehaviour
                 newRainIntensity = 1f; // 약한 비
                 break;
             case 2:
-                newRainIntensity = 15f; // 보통 비
+                newRainIntensity = 10f; // 보통 비
                 break;
             case 3:
-                newRainIntensity = 30f; // 강한 비/폭우
+                newRainIntensity = 25f; // 강한 비/폭우
                 break;
         }
 
@@ -335,7 +335,7 @@ public class ChangeEnviroment : NetworkBehaviour
     private void ApplyLightningChanges()
     {
         int weatherStage = GetWeatherStage();
-        
+
         if (lightningFlash != null)
         {
             // Stage 3에서만 천둥 활성화
@@ -393,7 +393,7 @@ public class ChangeEnviroment : NetworkBehaviour
 
         Debug.Log($"💨 Wind [Stage {buttonPressCount}/9] - Strength: {newWindStrength:F2}, Turbulence: {turbulence:F2}");
     }
-    
+
 
 
     // 비 강도 설정

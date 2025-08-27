@@ -30,19 +30,21 @@ public class LightningFlash : MonoBehaviour
 
     [Header("Audio")]
     [Range(0f, 1.5f)] public float thunderVolume = 1.0f;  // Volume control
+    [Range(1f, 5f)] public float thunderMinDelay = 2f;     // 천둥소리 최소 딜레이
+    [Range(3f, 8f)] public float thunderMaxDelay = 5f;     // 천둥소리 최대 딜레이
 
     [Header("Control")]
     public bool isActive = false; // External control
-    
-    void Start() 
-    { 
+
+    void Start()
+    {
         // Start에서는 절대 MainLoop 시작하지 않음
         // 오직 StartLightning()에서만 시작
         Debug.Log($"⚡ LightningFlash Start() - isActive: {isActive}");
     }
-    
-    void OnEnable() 
-    { 
+
+    void OnEnable()
+    {
         // OnEnable에서는 아무것도 하지 않음 - Start에서 처리
     }
     void OnDisable() { StopAllCoroutines(); }
@@ -54,10 +56,12 @@ public class LightningFlash : MonoBehaviour
             yield return new WaitForSeconds(Random.Range(minInterval, maxInterval));
             yield return StartCoroutine(DoBurst());   // Flash burst
 
-            if (thunder != null)
+            if (thunder != null && thunder.clip != null)
             {
                 thunder.volume = thunderVolume;
-                thunder.PlayDelayed(Random.Range(0.2f, 0.5f)); // Slight delay
+                float randomDelay = Random.Range(thunderMinDelay, thunderMaxDelay);
+                thunder.PlayDelayed(randomDelay);
+                Debug.Log($"⚡ 번개 플래시 완료, 천둥소리 {randomDelay:F1}초 후 재생");
             }
         }
     }
@@ -86,10 +90,10 @@ public class LightningFlash : MonoBehaviour
             // Random position for lightning
             Vector3 originalPos = flashLight.transform.position;
             float randomX = Random.Range(-20f, 20f);
-            float randomY = Random.Range(15f, 20f);  // Height variation
+            float randomY = Random.Range(2f, 15f);  // Height variation
             float randomZ = Random.Range(-20f, 20f);
             flashLight.transform.position = new Vector3(randomX, randomY, randomZ);
-            
+
             // Flash light on and off with high intensity
             float originalIntensity = flashLight.intensity;
             flashLight.intensity = flashLightIntensity;
@@ -97,7 +101,7 @@ public class LightningFlash : MonoBehaviour
             yield return new WaitForSeconds(flashDuration);
             flashLight.enabled = false;
             flashLight.intensity = originalIntensity;
-            
+
             // Restore original position
             flashLight.transform.position = originalPos;
             yield break;
@@ -158,7 +162,7 @@ public class LightningFlash : MonoBehaviour
         StopAllCoroutines();
         StartCoroutine(MainLoop());
     }
-    
+
     public void StopLightning()
     {
         isActive = false;

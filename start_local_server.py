@@ -19,7 +19,7 @@ def get_local_ip():
     return ip
 
 # WebGL 빌드 폴더 확인
-WEBGL_BUILD_PATH = "/Users/macmini/Desktop/1-Projects/수퍼 테스트 배드/팀작업/Unity_WebGL/public"
+WEBGL_BUILD_PATH = "/Users/macmini/Desktop/1-Projects/수퍼 테스트 배드/팀작업/Unity_WebGL/public/Build"
 PORT = 8080
 
 if not os.path.exists(WEBGL_BUILD_PATH):
@@ -32,19 +32,38 @@ class WebGLHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=WEBGL_BUILD_PATH, **kwargs)
     
+    # MIME 타입 오버라이드
+    extensions_map = {
+        '': 'application/octet-stream',
+        '.manifest': 'text/cache-manifest',
+        '.html': 'text/html',
+        '.png': 'image/png',
+        '.jpg': 'image/jpg',
+        '.svg': 'image/svg+xml',
+        '.css': 'text/css',
+        '.js': 'application/javascript',
+        '.json': 'application/json',
+        '.xml': 'text/xml',
+        '.wasm': 'application/wasm',
+        '.data': 'application/octet-stream',
+        '.gz': 'application/gzip',
+        '.br': 'application/brotli',
+    }
+    
+    def guess_type(self, path):
+        """MIME 타입 추론 오버라이드"""
+        mimetype = super().guess_type(path)
+        if mimetype == ('application/octet-stream', None) and path.endswith('.wasm'):
+            return ('application/wasm', None)
+        return mimetype
+    
     def end_headers(self):
         # CORS 헤더 추가 (로컬 네트워크 접근 허용)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-        
-        # WebGL 최적화 헤더
-        if self.path.endswith('.wasm'):
-            self.send_header('Content-Type', 'application/wasm')
-        elif self.path.endswith('.data'):
-            self.send_header('Content-Type', 'application/octet-stream')
-        elif self.path.endswith('.js'):
-            self.send_header('Content-Type', 'application/javascript')
+        self.send_header('Cross-Origin-Embedder-Policy', 'require-corp')
+        self.send_header('Cross-Origin-Opener-Policy', 'same-origin')
         
         super().end_headers()
 
