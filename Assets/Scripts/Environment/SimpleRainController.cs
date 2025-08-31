@@ -44,6 +44,26 @@ public class SimpleRainController : MonoBehaviour
         SetupFog();
         SetupAudio();
         FindPlayer();
+        
+        // 시작 시 비를 비활성화 (Stage 0에서 시작)
+        if (rainInstance != null)
+        {
+            rainInstance.SetActive(false);
+            Debug.Log("[SimpleRainController] Rain disabled at start (Stage 0)");
+        }
+        
+        // 안개도 비활성화
+        if (fogInstance != null)
+        {
+            fogInstance.SetActive(false);
+            Debug.Log("[SimpleRainController] Fog disabled at start (Stage 0)");
+        }
+        
+        // 오디오도 정지
+        if (audioSource != null)
+        {
+            audioSource.Stop();
+        }
     }
 
     void CreateRainEffects()
@@ -141,8 +161,9 @@ public class SimpleRainController : MonoBehaviour
             audioSource.loop = true;
             audioSource.volume = volume;
             audioSource.spatialBlend = 0f;
-            audioSource.Play();
-            Debug.Log("[SimpleRainController] 비 사운드 재생");
+            // 시작 시 재생하지 않음 (Stage 0이므로)
+            audioSource.Stop();
+            Debug.Log("[SimpleRainController] 비 사운드 설정 완료 (재생 안함 - Stage 0)");
         }
         else
         {

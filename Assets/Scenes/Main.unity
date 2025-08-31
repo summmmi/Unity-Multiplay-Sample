@@ -808,7 +808,7 @@ MonoBehaviour:
   - tty.wchusbserial
   telepathyPort: 7778
   simpleWebPort: 7779
-  localServerAddress: 10.10.100.244
+  localServerAddress: 192.168.219.101
   multiplexTransport: {fileID: 0}
   telepathyTransport: {fileID: 0}
   simpleWebTransport: {fileID: 0}
@@ -1299,7 +1299,7 @@ Camera:
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
-  m_BackGroundColor: {r: 0.41255784, g: 0.44572884, b: 0.6886792, a: 1}
+  m_BackGroundColor: {r: 0.45759168, g: 0.5084098, b: 0.8584906, a: 1}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 1
@@ -1955,7 +1955,7 @@ Light:
   serializedVersion: 10
   m_Type: 3
   m_Shape: 0
-  m_Color: {r: 0, g: 0.4976437, b: 1, a: 1}
+  m_Color: {r: 0.9211463, g: 0.9322276, b: 0.9433962, a: 1}
   m_Intensity: 1.37
   m_Range: 16.04
   m_SpotAngle: 30
@@ -3342,7 +3342,7 @@ Light:
   serializedVersion: 10
   m_Type: 1
   m_Shape: 0
-  m_Color: {r: 1, g: 0.8889968, b: 0.6933962, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_Intensity: 0.39
   m_Range: 10
   m_SpotAngle: 30
@@ -5307,11 +5307,29 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c4f25f6666dd943078ebe0714d640a53, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  skyboxMaterials:
-  - {fileID: 2100000, guid: c83a7bffbcad74addbab7e156877b8b0, type: 2}
-  - {fileID: 2100000, guid: 0bd3d00ac0885433291902736caf93e2, type: 2}
-  - {fileID: 2100000, guid: 893a27fd9c1ff4966a14d77e9848a134, type: 2}
+  skyboxSunny: {fileID: 2100000, guid: c83a7bffbcad74addbab7e156877b8b0, type: 2}
+  skyboxDark: {fileID: 2100000, guid: 893a27fd9c1ff4966a14d77e9848a134, type: 2}
+  stageSettings:
+  - exposure: 0.7
+    lightColor: {r: 0.5921569, g: 0.72156864, b: 0.90588236, a: 1}
+    lightIntensity: 0.8
+    ambientIntensity: 1
+  - exposure: 0.65
+    lightColor: {r: 0.5921569, g: 0.72156864, b: 0.90588236, a: 1}
+    lightIntensity: 0.8
+    ambientIntensity: 1
+  - exposure: 0.45
+    lightColor: {r: 0.48794055, g: 0.6174433, b: 0.8018868, a: 1}
+    lightIntensity: 0.6
+    ambientIntensity: 0.8
+  - exposure: 0.35
+    lightColor: {r: 0.36862746, g: 0.47843137, b: 0.62352943, a: 1}
+    lightIntensity: 0.4
+    ambientIntensity: 0.6
   directionalLight: {fileID: 410087040}
+  transitionDuration: 2
+  useOverlayTransition: 1
+  overlayMaterial: {fileID: 0}
 --- !u!1 &1187820655
 GameObject:
   m_ObjectHideFlags: 0
@@ -7665,7 +7683,26 @@ MonoBehaviour:
   rainController: {fileID: 546236796}
   lightningFlash: {fileID: 0}
   windZone: {fileID: 0}
+  hostCamera: {fileID: 0}
+  cameraBackgroundSettings:
+  - backgroundColor: {r: 0.45882353, g: 0.50980395, b: 0.85882354, a: 1}
+  - backgroundColor: {r: 0.45882353, g: 0.50980395, b: 0.85882354, a: 1}
+  - backgroundColor: {r: 0.25792095, g: 0.33986175, b: 0.8679245, a: 1}
+  - backgroundColor: {r: 0.22432362, g: 0.28110144, b: 0.6698113, a: 1}
   maxButtonCount: 9
+  rainStageSettings:
+  - enableRain: 0
+    rainIntensity: 0
+    enableThunder: 0
+  - enableRain: 0
+    rainIntensity: 0
+    enableThunder: 0
+  - enableRain: 1
+    rainIntensity: 12.4
+    enableThunder: 0
+  - enableRain: 1
+    rainIntensity: 25
+    enableThunder: 1
 --- !u!1001 &2094381262
 PrefabInstance:
   m_ObjectHideFlags: 0

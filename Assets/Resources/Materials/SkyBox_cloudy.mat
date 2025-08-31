@@ -20,7 +20,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: SkyBox_Dark
+  m_Name: SkyBox_cloudy
   m_Shader: {fileID: 108, guid: 0000000000000000f000000000000000, type: 0}
   m_Parent: {fileID: 2100000, guid: c83a7bffbcad74addbab7e156877b8b0, type: 2}
   m_ModifiedSerializedProperties: 0
@@ -39,15 +39,15 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: 7806e4ee7f07cc04995e627430bbf6d0, type: 3}
+        m_Texture: {fileID: 2800000, guid: 251bc0ab1089b4a2c9d8a56c7ee65690, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Exposure: 0.35
+    - _Exposure: 1
     - _Layout: 0
     - _Mapping: 1
-    - _Rotation: 0.27
+    - _Rotation: 31.65
     m_Colors:
-    - _Tint: {r: 0.36712348, g: 0.47985202, b: 0.62264144, a: 0.5}
+    - _Tint: {r: 0.24528301, g: 0.24528301, b: 0.24528301, a: 0.5}
   m_BuildTextureStacks: []

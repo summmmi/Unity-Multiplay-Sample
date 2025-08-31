@@ -19,12 +19,48 @@ public class ChangeEnviroment : NetworkBehaviour
     [Header("Wind")]
     public WindZone windZone;
 
+    [Header("Host Camera Background")]
+    public Camera hostCamera;
+    
+    [System.Serializable]
+    public class CameraBackgroundSettings
+    {
+        public Color backgroundColor = Color.blue;
+    }
+    
+    [Header("Camera Background Settings for Each Stage")]
+    public CameraBackgroundSettings[] cameraBackgroundSettings = new CameraBackgroundSettings[4]
+    {
+        new CameraBackgroundSettings { backgroundColor = new Color(0.3f, 0.7f, 1f, 1f) },      // Stage 0 - 밝은 하늘색
+        new CameraBackgroundSettings { backgroundColor = new Color(0.4f, 0.6f, 0.8f, 1f) },    // Stage 1 - 약간 어두운 하늘색  
+        new CameraBackgroundSettings { backgroundColor = new Color(0.3f, 0.4f, 0.6f, 1f) },    // Stage 2 - 흐린 하늘색
+        new CameraBackgroundSettings { backgroundColor = new Color(0.2f, 0.3f, 0.4f, 1f) }     // Stage 3 - 어두운 하늘색
+    };
+
     [Header("=== Button Count & Stage System ===")]
     [SyncVar(hook = nameof(OnButtonCountChanged))]
     private int buttonPressCount = 0;
 
     [Header("Stage Settings")]
     [SerializeField] private int maxButtonCount = 9;
+    
+    [System.Serializable]
+    public class RainStageSettings
+    {
+        public bool enableRain = false;
+        [Range(0f, 50f)]
+        public float rainIntensity = 0f;
+        public bool enableThunder = false;
+    }
+    
+    [Header("Rain Settings for Each Stage")]
+    public RainStageSettings[] rainStageSettings = new RainStageSettings[4]
+    {
+        new RainStageSettings { enableRain = false, rainIntensity = 0f, enableThunder = false },   // Stage 0
+        new RainStageSettings { enableRain = false, rainIntensity = 0f, enableThunder = false },   // Stage 1
+        new RainStageSettings { enableRain = true, rainIntensity = 10f, enableThunder = false },   // Stage 2
+        new RainStageSettings { enableRain = true, rainIntensity = 25f, enableThunder = true }     // Stage 3
+    };
 
     // 3단계 시스템 (비, 천둥)
     private int GetWeatherStage()
@@ -54,15 +90,23 @@ public class ChangeEnviroment : NetworkBehaviour
         InitializeLightning();
         InitializeWind();
         InitializeFog();
+        InitializeHostCamera();
 
         // Store original values
         StoreOriginalValues();
 
-        // Set initial rain intensity (very light rain)
+        // Start with no rain (stage 0)
         if (rainController != null)
         {
-            SetRainIntensity(1f); // Start with very light rain
-            Debug.Log("🌧️ Initial rain intensity set to 1 (very light rain)");
+            if (rainController.rainInstance != null)
+            {
+                rainController.rainInstance.SetActive(false);
+            }
+            if (rainController.audioSource != null)
+            {
+                rainController.audioSource.Stop();
+            }
+            Debug.Log("🌧️ Initial state: Rain OFF (Stage 0)");
         }
 
         // Make sure lightning is OFF initially
@@ -225,6 +269,44 @@ public class ChangeEnviroment : NetworkBehaviour
         Debug.Log("✅ Fog settings initialized");
     }
 
+    void InitializeHostCamera()
+    {
+        if (hostCamera == null)
+        {
+            // Host 카메라 자동 찾기 (Main Camera 또는 Host라는 이름이 포함된 카메라)
+            Camera[] cameras = FindObjectsOfType<Camera>();
+            foreach (Camera cam in cameras)
+            {
+                if (cam.gameObject.name.Contains("Host") || 
+                    cam.gameObject.name.Contains("Main") || 
+                    cam == Camera.main)
+                {
+                    hostCamera = cam;
+                    Debug.Log($"✅ Host camera found: {cam.gameObject.name}");
+                    break;
+                }
+            }
+        }
+
+        if (hostCamera != null)
+        {
+            // Clear Flag를 Solid Color로 설정 (skybox 대신 solid color 사용)
+            hostCamera.clearFlags = CameraClearFlags.SolidColor;
+            
+            // 초기 색상 설정 (Stage 0)
+            if (cameraBackgroundSettings.Length > 0)
+            {
+                hostCamera.backgroundColor = cameraBackgroundSettings[0].backgroundColor;
+            }
+            
+            Debug.Log($"✅ Host camera initialized - Background: {hostCamera.backgroundColor}");
+        }
+        else
+        {
+            Debug.LogWarning("⚠️ Host camera not found - camera background changes will not work");
+        }
+    }
+
 
     void StoreOriginalValues()
     {
@@ -271,6 +353,7 @@ public class ChangeEnviroment : NetworkBehaviour
         ApplyWeatherChanges();
         ApplyLightningChanges();
         ApplyWindChanges();
+        ApplyCameraBackgroundChanges();
 
         Debug.Log($"✅ All environment changes applied - Button count: {buttonPressCount}");
     }
@@ -280,11 +363,12 @@ public class ChangeEnviroment : NetworkBehaviour
         int weatherStage = GetWeatherStage();
         float gradualProgress = GetGradualProgress();
 
-        // Apply skybox and lighting changes
+        // Apply skybox and lighting changes - 비동기로 처리
         if (skyboxController != null)
         {
             Debug.Log($"🌤️ SkyboxController found, applying weather stage: {weatherStage}");
-            skyboxController.ApplySkyboxAndLighting(weatherStage);
+            // 코루틴으로 처리하여 메인 스레드 블로킹 방지
+            StartCoroutine(ApplySkyboxAsync(weatherStage));
         }
         else
         {
@@ -303,33 +387,55 @@ public class ChangeEnviroment : NetworkBehaviour
 
         Debug.Log($"✅ Controllers updated - Weather stage: {weatherStage}, Gradual progress: {gradualProgress:F2}");
     }
+    
+    private IEnumerator ApplySkyboxAsync(int weatherStage)
+    {
+        skyboxController.ApplySkyboxAndLighting(weatherStage);
+        yield return null; // 한 프레임 대기하여 부드럽게 처리
+    }
 
 
     private void ApplyWeatherChanges()
     {
         int weatherStage = GetWeatherStage(); // 0-3 stages
 
-        // 3단계 시스템으로 비 강도 설정
-        float newRainIntensity = 0f;
-        switch (weatherStage)
+        // Inspector에서 설정한 값 사용
+        if (weatherStage >= 0 && weatherStage < rainStageSettings.Length)
         {
-            case 0:
-                newRainIntensity = 1f; // 아주 가벼운 비
-                break;
-            case 1:
-                newRainIntensity = 1f; // 약한 비
-                break;
-            case 2:
-                newRainIntensity = 10f; // 보통 비
-                break;
-            case 3:
-                newRainIntensity = 25f; // 강한 비/폭우
-                break;
+            RainStageSettings stageSettings = rainStageSettings[weatherStage];
+            
+            // 비 활성화/비활성화
+            if (rainController != null && rainController.rainInstance != null)
+            {
+                rainController.rainInstance.SetActive(stageSettings.enableRain);
+                
+                // 오디오도 같이 제어
+                if (rainController.audioSource != null)
+                {
+                    if (stageSettings.enableRain)
+                    {
+                        if (!rainController.audioSource.isPlaying)
+                            rainController.audioSource.Play();
+                    }
+                    else
+                    {
+                        rainController.audioSource.Stop();
+                    }
+                }
+            }
+
+            // 비가 활성화된 경우에만 강도 설정
+            if (stageSettings.enableRain)
+            {
+                SetRainIntensity(stageSettings.rainIntensity);
+            }
+
+            Debug.Log($"🌧️ Weather [Stage {weatherStage}/3] - Rain: {(stageSettings.enableRain ? "ON" : "OFF")}, Intensity: {stageSettings.rainIntensity}");
         }
-
-        SetRainIntensity(newRainIntensity);
-
-        Debug.Log($"🌧️ Weather [Stage {weatherStage}/3] - Rain intensity: {newRainIntensity}");
+        else
+        {
+            Debug.LogWarning($"⚠️ Invalid weather stage: {weatherStage}");
+        }
     }
 
     private void ApplyLightningChanges()
@@ -338,16 +444,21 @@ public class ChangeEnviroment : NetworkBehaviour
 
         if (lightningFlash != null)
         {
-            // Stage 3에서만 천둥 활성화
-            if (weatherStage == 3)
+            // Inspector 설정에 따라 천둥 활성화
+            if (weatherStage >= 0 && weatherStage < rainStageSettings.Length)
             {
-                lightningFlash.StartLightning();
-                Debug.Log("⚡ Lightning started for storm stage");
-            }
-            else
-            {
-                lightningFlash.StopLightning();
-                Debug.Log("⚡ Lightning stopped");
+                RainStageSettings stageSettings = rainStageSettings[weatherStage];
+                
+                if (stageSettings.enableThunder)
+                {
+                    lightningFlash.StartLightning();
+                    Debug.Log($"⚡ Lightning started for stage {weatherStage}");
+                }
+                else
+                {
+                    lightningFlash.StopLightning();
+                    Debug.Log($"⚡ Lightning stopped for stage {weatherStage}");
+                }
             }
         }
     }
@@ -394,7 +505,37 @@ public class ChangeEnviroment : NetworkBehaviour
         Debug.Log($"💨 Wind [Stage {buttonPressCount}/9] - Strength: {newWindStrength:F2}, Turbulence: {turbulence:F2}");
     }
 
+    private void ApplyCameraBackgroundChanges()
+    {
+        if (hostCamera == null)
+        {
+            Debug.LogWarning("⚠️ Host camera not found - skipping background change");
+            return;
+        }
 
+        int weatherStage = GetWeatherStage(); // 0-3 stages
+
+        // Inspector에서 설정한 색상 사용
+        if (weatherStage >= 0 && weatherStage < cameraBackgroundSettings.Length)
+        {
+            CameraBackgroundSettings stageSettings = cameraBackgroundSettings[weatherStage];
+            
+            // 카메라 배경 색상 변경
+            hostCamera.backgroundColor = stageSettings.backgroundColor;
+            
+            // Clear Flag가 SolidColor가 아니면 강제로 설정
+            if (hostCamera.clearFlags != CameraClearFlags.SolidColor)
+            {
+                hostCamera.clearFlags = CameraClearFlags.SolidColor;
+            }
+            
+            Debug.Log($"📷 Host Camera [Stage {weatherStage}/3] - Background: {stageSettings.backgroundColor}");
+        }
+        else
+        {
+            Debug.LogWarning($"⚠️ Invalid weather stage for camera background: {weatherStage}");
+        }
+    }
 
     // 비 강도 설정
     private void SetRainIntensity(float intensity)
@@ -492,6 +633,14 @@ public class ChangeEnviroment : NetworkBehaviour
     {
         if (rainController != null && rainController.audioSource != null)
         {
+            // intensity가 0이면 소리 정지
+            if (intensity <= 0)
+            {
+                rainController.audioSource.Stop();
+                Debug.Log($"🔊 Rain sound stopped (intensity: 0)");
+                return;
+            }
+            
             // 기본 볼륨 0.4에서 강도에 따라 조절 (최대 1.0까지)
             float baseVolume = 0.4f;
             float maxVolume = 1.0f;
@@ -499,6 +648,13 @@ public class ChangeEnviroment : NetworkBehaviour
             float newVolume = Mathf.Clamp(baseVolume * volumeMultiplier, 0.1f, maxVolume);
 
             rainController.audioSource.volume = newVolume;
+            
+            // 오디오가 재생 중이 아니면 시작
+            if (!rainController.audioSource.isPlaying)
+            {
+                rainController.audioSource.Play();
+            }
+            
             Debug.Log($"🔊 Rain sound volume: {rainController.audioSource.volume} (intensity: {intensity}, multiplier: {volumeMultiplier})");
         }
         else

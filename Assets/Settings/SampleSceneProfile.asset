@@ -30,7 +30,7 @@ MonoBehaviour:
     m_Value: 65472
   tint:
     m_OverrideState: 1
-    m_Value: {r: 0.39279994, g: 0.5899116, b: 0.8584906, a: 1}
+    m_Value: {r: 0.9150943, g: 0.9150943, b: 0.9150943, a: 1}
   highQualityFiltering:
     m_OverrideState: 1
     m_Value: 0
@@ -179,7 +179,7 @@ MonoBehaviour:
     m_Value: {x: 1, y: 1, z: 1, w: -0.12539184}
   gamma:
     m_OverrideState: 1
-    m_Value: {x: 1, y: 1, z: 1, w: 0.44822243}
+    m_Value: {x: 1, y: 1, z: 1, w: 0.57894737}
   gain:
     m_OverrideState: 1
     m_Value: {x: 1, y: 1, z: 1, w: 0.60278195}

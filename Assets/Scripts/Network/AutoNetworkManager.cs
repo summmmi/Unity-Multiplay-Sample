@@ -14,7 +14,7 @@ public class AutoNetworkManager : NetworkManager
     
     [Header("Local Network Settings")]
     [Tooltip("로컬 네트워크 IP 주소 (예: 192.168.1.100)")]
-    [SerializeField] private string localServerAddress = "10.10.100.244";
+    [SerializeField] private string localServerAddress = "192.168.219.101";
 
     [Header("MultiplexTransport Settings")]
     [SerializeField] private MultiplexTransport multiplexTransport;
