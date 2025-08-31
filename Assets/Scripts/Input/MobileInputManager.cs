@@ -93,12 +93,22 @@ public class MobileInputManager : MonoBehaviour
     
     void CheckNetworkModeAndHideUI()
     {
-        // WebGL Client에서만 UI 표시
+        // WebGL Client에서만 UI 표시 (단, UserID 설정이 완료된 경우에만)
         if (Application.platform == RuntimePlatform.WebGLPlayer)
         {
-            Debug.Log("[MobileInputManager] WebGL Client - UI 표시");
-            hasCheckedNetworkMode = true;
-            return;
+            // UserID가 설정되었는지 확인
+            if (UserIDManager.IsUserIDSet())
+            {
+                Debug.Log("[MobileInputManager] WebGL Client - UI 표시 (ID 설정 완료)");
+                hasCheckedNetworkMode = true;
+                return;
+            }
+            else
+            {
+                // ID가 아직 설정되지 않았으면 대기
+                Debug.Log("[MobileInputManager] WebGL Client - ID 설정 대기 중");
+                return; // hasCheckedNetworkMode를 true로 설정하지 않아서 계속 체크
+            }
         }
         
         // 나머지는 모두 숨김 (PC Host, PC Client, Editor)
@@ -293,5 +303,12 @@ public class MobileInputManager : MonoBehaviour
     public void SetVirtualJoystick(VirtualJoystick joystick)
     {
         virtualJoystick = joystick;
+    }
+    
+    // UserIDManager에서 호출되는 메서드
+    public void OnUserIDSet()
+    {
+        Debug.Log("[MobileInputManager] UserID 설정 완료 - 네트워크 모드 재확인");
+        hasCheckedNetworkMode = false; // 다시 체크하도록 플래그 리셋
     }
 }

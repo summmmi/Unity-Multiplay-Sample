@@ -63,7 +63,7 @@ public class ChangeEnviroment : NetworkBehaviour
     };
 
     // 3단계 시스템 (비, 천둥)
-    private int GetWeatherStage()
+    public int GetWeatherStage()
     {
         if (buttonPressCount <= 0) return 0;
         if (buttonPressCount <= 3) return 1;  // 1-3: Stage 1
@@ -354,6 +354,13 @@ public class ChangeEnviroment : NetworkBehaviour
         ApplyLightningChanges();
         ApplyWindChanges();
         ApplyCameraBackgroundChanges();
+
+        // StatusUIManager에 날씨 변경 알림
+        StatusUIManager statusUI = StatusUIManager.Instance;
+        if (statusUI != null)
+        {
+            statusUI.SetWeatherLevel(GetWeatherStage());
+        }
 
         Debug.Log($"✅ All environment changes applied - Button count: {buttonPressCount}");
     }

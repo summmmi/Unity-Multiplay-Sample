@@ -21,6 +21,9 @@ public class Player : NetworkBehaviour
 
     [SyncVar(hook = nameof(OnAnimationStateChanged))]
     private int currentAnimationState = 0; // 0=idle, 1=walk, 2=meet
+    
+    [SyncVar(hook = nameof(OnDistanceChanged))]
+    private float playerTotalDistance = 0f; // 플레이어 총 이동 거리 (미터)
 
     [Header("Meet Detection")]
     [SerializeField] private float meetDistance = 2.0f; // meet 감지 거리
@@ -34,6 +37,10 @@ public class Player : NetworkBehaviour
     [SerializeField] private Camera playerCamera;
     [SerializeField] private AudioListener audioListener;
     [SerializeField] private Vector3 cameraOffset = new Vector3(0, 1.6f, 0); // 머리 높이 (필요시 Inspector에서 조정)
+    
+    [Header("Distance Tracking")]
+    private Vector3 lastTrackedPosition;
+    private bool positionInitialized = false;
 
     void Start()
     {
@@ -43,6 +50,7 @@ public class Player : NetworkBehaviour
         SetupPlayerCamera();
         SetupMobileInput();
         SetupAnimation();
+        InitializeDistanceTracking();
 
         // Terrain Detail 강제 활성화 (WebGL 호환성)
         if (isLocalPlayer)
@@ -349,6 +357,9 @@ public class Player : NetworkBehaviour
                         Debug.Log($"[Player] 이동: Player={transform.position}, Camera={playerCamera.transform.position}");
                     }
                 }
+                
+                // 거리 추적 (로컬 플레이어만)
+                TrackDistance();
             }
             else
             {
@@ -568,5 +579,66 @@ public class Player : NetworkBehaviour
                 Debug.LogError("[Camera Debug] 플레이어 카메라가 null입니다!");
             }
         }
+    }
+    
+    void InitializeDistanceTracking()
+    {
+        lastTrackedPosition = transform.position;
+        positionInitialized = true;
+        Debug.Log($"[Player] 거리 추적 초기화 - 시작 위치: {lastTrackedPosition}");
+    }
+    
+    void TrackDistance()
+    {
+        if (!isLocalPlayer || !positionInitialized) return;
+        
+        Vector3 currentPosition = transform.position;
+        
+        // 수평 이동 거리 계산 (Y축 제외)
+        Vector3 horizontalMovement = new Vector3(
+            currentPosition.x - lastTrackedPosition.x,
+            0,
+            currentPosition.z - lastTrackedPosition.z
+        );
+        
+        float distanceMoved = horizontalMovement.magnitude;
+        
+        // 너무 큰 이동은 텔레포트로 간주하고 무시 (10미터 이하만 유효)
+        if (distanceMoved < 10f && distanceMoved > 0.01f) // 최소 이동 거리 추가
+        {
+            float newTotalDistance = playerTotalDistance + distanceMoved;
+            CmdUpdateDistance(newTotalDistance);
+            
+            // StatusUIManager에 즉시 업데이트
+            if (StatusUIManager.Instance != null)
+            {
+                StatusUIManager.Instance.SetMyDistance(newTotalDistance);
+            }
+        }
+        
+        lastTrackedPosition = currentPosition;
+    }
+    
+    [Command]
+    void CmdUpdateDistance(float newDistance)
+    {
+        playerTotalDistance = newDistance;
+    }
+    
+    void OnDistanceChanged(float oldDistance, float newDistance)
+    {
+        Debug.Log($"[Player] 플레이어 {netId} 거리 업데이트: {oldDistance:F1}m -> {newDistance:F1}m");
+        
+        // StatusUIManager에 다른 플레이어들의 거리 변화 알림
+        if (StatusUIManager.Instance != null)
+        {
+            StatusUIManager.Instance.OnPlayerDistanceUpdated();
+        }
+    }
+    
+    // 외부에서 현재 플레이어 거리 가져오기
+    public float GetTotalDistance()
+    {
+        return playerTotalDistance;
     }
 }
