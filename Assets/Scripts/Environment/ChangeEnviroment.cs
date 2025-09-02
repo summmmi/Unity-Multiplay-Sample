@@ -70,6 +70,12 @@ public class ChangeEnviroment : NetworkBehaviour
         if (buttonPressCount <= 6) return 2;  // 4-6: Stage 2
         return 3;  // 7-9: Stage 3
     }
+    
+    // Host UI에서 사용할 버튼 카운트 반환
+    public int GetButtonPressCount()
+    {
+        return buttonPressCount;
+    }
 
     // 9단계 점진적 변화 (나머지 효과들)
     private float GetGradualProgress()

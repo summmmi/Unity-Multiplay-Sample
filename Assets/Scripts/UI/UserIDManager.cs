@@ -49,7 +49,14 @@ public class UserIDManager : MonoBehaviour
         if (Instance == null)
         {
             Instance = this;
-            DontDestroyOnLoad(gameObject);
+            try
+            {
+                DontDestroyOnLoad(this.gameObject);
+            }
+            catch (System.Exception)
+            {
+                // 이미 DontDestroyOnLoad된 경우 무시
+            }
         }
         else
         {

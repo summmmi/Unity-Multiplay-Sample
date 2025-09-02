@@ -22,10 +22,10 @@ public class Player : NetworkBehaviour
 
     [SyncVar(hook = nameof(OnAnimationStateChanged))]
     private int currentAnimationState = 0; // 0=idle, 1=walk, 2=meet
-    
+
     [SyncVar(hook = nameof(OnDistanceChanged))]
     private float playerTotalDistance = 0f; // 플레이어 총 이동 거리 (미터)
-    
+
     [SyncVar(hook = nameof(OnPlayerIDChanged))]
     private string playerID = ""; // 플레이어 ID
 
@@ -41,11 +41,11 @@ public class Player : NetworkBehaviour
     [SerializeField] private Camera playerCamera;
     [SerializeField] private AudioListener audioListener;
     [SerializeField] private Vector3 cameraOffset = new Vector3(0, 1.6f, 0); // 머리 높이 (필요시 Inspector에서 조정)
-    
+
     [Header("Distance Tracking")]
     private Vector3 lastTrackedPosition;
     private bool positionInitialized = false;
-    
+
     [Header("Player Name Display")]
     [SerializeField] private GameObject playerNameCanvas;
     [SerializeField] private TextMeshProUGUI playerNameText;
@@ -367,7 +367,7 @@ public class Player : NetworkBehaviour
                         Debug.Log($"[Player] 이동: Player={transform.position}, Camera={playerCamera.transform.position}");
                     }
                 }
-                
+
                 // 거리 추적 (로컬 플레이어만)
                 TrackDistance();
             }
@@ -431,6 +431,20 @@ public class Player : NetworkBehaviour
     {
         PlayerMovement();
         DebugCameraInfo();
+        
+        // F1 키로 Detail Prototypes 디버그
+        if (Input.GetKeyDown(KeyCode.F1))
+        {
+            var terrain = FindObjectOfType<Terrain>();
+            if (terrain != null)
+            {
+                Debug.Log($"Detail prototypes count: {terrain.terrainData.detailPrototypes.Length}");
+                for (int i = 0; i < terrain.terrainData.detailPrototypes.Length; i++)
+                {
+                    Debug.Log($"Prototype {i}: {terrain.terrainData.detailPrototypes[i].prototype?.name}");
+                }
+            }
+        }
     }
 
     void SetupCameraPostProcessing()
@@ -590,68 +604,68 @@ public class Player : NetworkBehaviour
             }
         }
     }
-    
+
     void InitializeDistanceTracking()
     {
         lastTrackedPosition = transform.position;
         positionInitialized = true;
         Debug.Log($"[Player] 거리 추적 초기화 - 시작 위치: {lastTrackedPosition}");
     }
-    
+
     void TrackDistance()
     {
         if (!isLocalPlayer || !positionInitialized) return;
-        
+
         Vector3 currentPosition = transform.position;
-        
+
         // 수평 이동 거리 계산 (Y축 제외)
         Vector3 horizontalMovement = new Vector3(
             currentPosition.x - lastTrackedPosition.x,
             0,
             currentPosition.z - lastTrackedPosition.z
         );
-        
+
         float distanceMoved = horizontalMovement.magnitude;
-        
+
         // 너무 큰 이동은 텔레포트로 간주하고 무시 (10미터 이하만 유효)
         if (distanceMoved < 10f && distanceMoved > 0.01f) // 최소 이동 거리 추가
         {
             float newTotalDistance = playerTotalDistance + distanceMoved;
             CmdUpdateDistance(newTotalDistance);
-            
+
             // StatusUIManager에 즉시 업데이트
             if (StatusUIManager.Instance != null)
             {
                 StatusUIManager.Instance.SetMyDistance(newTotalDistance);
             }
         }
-        
+
         lastTrackedPosition = currentPosition;
     }
-    
+
     [Command]
     void CmdUpdateDistance(float newDistance)
     {
         playerTotalDistance = newDistance;
     }
-    
+
     void OnDistanceChanged(float oldDistance, float newDistance)
     {
         Debug.Log($"[Player] 플레이어 {netId} 거리 업데이트: {oldDistance:F1}m -> {newDistance:F1}m");
-        
+
         // StatusUIManager에 다른 플레이어들의 거리 변화 알림
         if (StatusUIManager.Instance != null)
         {
             StatusUIManager.Instance.OnPlayerDistanceUpdated();
         }
     }
-    
+
     // 외부에서 현재 플레이어 거리 가져오기
     public float GetTotalDistance()
     {
         return playerTotalDistance;
     }
-    
+
     void SetupPlayerID()
     {
         if (isLocalPlayer)
@@ -660,7 +674,7 @@ public class Player : NetworkBehaviour
             StartCoroutine(SetupPlayerIDDelayed());
         }
     }
-    
+
     System.Collections.IEnumerator SetupPlayerIDDelayed()
     {
         // UserIDManager가 준비될 때까지 대기
@@ -668,38 +682,38 @@ public class Player : NetworkBehaviour
         {
             yield return new WaitForSeconds(0.5f);
         }
-        
+
         // UserID를 가져와서 서버에 전송
         string userID = UserIDManager.GetUserID();
         CmdSetPlayerID(userID);
         Debug.Log($"[Player] 플레이어 ID 설정: {userID}");
     }
-    
+
     [Command]
     void CmdSetPlayerID(string id)
     {
         playerID = id;
         Debug.Log($"[Player] 서버에 플레이어 ID 설정: {id} (NetId: {netId})");
     }
-    
+
     void OnPlayerIDChanged(string oldID, string newID)
     {
         Debug.Log($"[Player] 플레이어 ID 변경: {oldID} -> {newID} (NetId: {netId})");
         UpdatePlayerNameDisplay(newID);
     }
-    
+
     // 외부에서 플레이어 ID 가져오기
     public string GetPlayerID()
     {
         return playerID;
     }
-    
+
     // 플레이어 정보 표시용
     public string GetPlayerInfo()
     {
         return $"ID: {playerID}, Distance: {playerTotalDistance:F1}m";
     }
-    
+
     void SetupPlayerNameDisplay()
     {
         if (playerNameCanvas != null)
@@ -714,7 +728,7 @@ public class Player : NetworkBehaviour
             {
                 playerNameCanvas.SetActive(true);
                 Debug.Log("[Player] 다른 플레이어 이름 표시 활성화");
-                
+
                 // 현재 ID가 있으면 표시
                 if (!string.IsNullOrEmpty(playerID))
                 {
@@ -727,7 +741,7 @@ public class Player : NetworkBehaviour
             Debug.LogWarning("[Player] Player Name Canvas가 할당되지 않았습니다!");
         }
     }
-    
+
     void UpdatePlayerNameDisplay(string id)
     {
         if (playerNameText != null && !isLocalPlayer)
