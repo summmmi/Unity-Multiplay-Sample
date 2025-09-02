@@ -677,7 +677,27 @@ public class ChangeEnviroment : NetworkBehaviour
         {
             buttonPressCount = newCount;
             ApplyEnvironmentChanges();
-            Debug.Log($"✅ Client environment synced via SyncVar - Button count: {newCount}");
+            Debug.Log($"✅ Client environment synced via SyncVar - Button count: {newCount}, Stage: {GetWeatherStage()}");
+        }
+    }
+    
+    // 새 클라이언트 접속 시 초기 동기화
+    public override void OnStartClient()
+    {
+        base.OnStartClient();
+        
+        // 약간의 지연 후 환경 상태 적용 (SyncVar 동기화 대기)
+        StartCoroutine(InitializeClientEnvironment());
+    }
+    
+    IEnumerator InitializeClientEnvironment()
+    {
+        yield return new WaitForSeconds(0.5f);
+        
+        if (!NetworkServer.active) // 클라이언트만
+        {
+            ApplyEnvironmentChanges();
+            Debug.Log($"✅ New client initialized - Button count: {buttonPressCount}, Stage: {GetWeatherStage()}");
         }
     }
 

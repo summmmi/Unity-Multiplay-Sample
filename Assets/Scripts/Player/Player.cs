@@ -4,6 +4,7 @@ using UnityEngine;
 using Mirror;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using TMPro;
 
 public class Player : NetworkBehaviour
 {
@@ -24,6 +25,9 @@ public class Player : NetworkBehaviour
     
     [SyncVar(hook = nameof(OnDistanceChanged))]
     private float playerTotalDistance = 0f; // 플레이어 총 이동 거리 (미터)
+    
+    [SyncVar(hook = nameof(OnPlayerIDChanged))]
+    private string playerID = ""; // 플레이어 ID
 
     [Header("Meet Detection")]
     [SerializeField] private float meetDistance = 2.0f; // meet 감지 거리
@@ -41,6 +45,10 @@ public class Player : NetworkBehaviour
     [Header("Distance Tracking")]
     private Vector3 lastTrackedPosition;
     private bool positionInitialized = false;
+    
+    [Header("Player Name Display")]
+    [SerializeField] private GameObject playerNameCanvas;
+    [SerializeField] private TextMeshProUGUI playerNameText;
 
     void Start()
     {
@@ -51,6 +59,8 @@ public class Player : NetworkBehaviour
         SetupMobileInput();
         SetupAnimation();
         InitializeDistanceTracking();
+        SetupPlayerID();
+        SetupPlayerNameDisplay();
 
         // Terrain Detail 강제 활성화 (WebGL 호환성)
         if (isLocalPlayer)
@@ -640,5 +650,90 @@ public class Player : NetworkBehaviour
     public float GetTotalDistance()
     {
         return playerTotalDistance;
+    }
+    
+    void SetupPlayerID()
+    {
+        if (isLocalPlayer)
+        {
+            // 약간의 지연 후 Player ID 설정 (UserIDManager 초기화 대기)
+            StartCoroutine(SetupPlayerIDDelayed());
+        }
+    }
+    
+    System.Collections.IEnumerator SetupPlayerIDDelayed()
+    {
+        // UserIDManager가 준비될 때까지 대기
+        while (UserIDManager.Instance == null || !UserIDManager.IsUserIDSet())
+        {
+            yield return new WaitForSeconds(0.5f);
+        }
+        
+        // UserID를 가져와서 서버에 전송
+        string userID = UserIDManager.GetUserID();
+        CmdSetPlayerID(userID);
+        Debug.Log($"[Player] 플레이어 ID 설정: {userID}");
+    }
+    
+    [Command]
+    void CmdSetPlayerID(string id)
+    {
+        playerID = id;
+        Debug.Log($"[Player] 서버에 플레이어 ID 설정: {id} (NetId: {netId})");
+    }
+    
+    void OnPlayerIDChanged(string oldID, string newID)
+    {
+        Debug.Log($"[Player] 플레이어 ID 변경: {oldID} -> {newID} (NetId: {netId})");
+        UpdatePlayerNameDisplay(newID);
+    }
+    
+    // 외부에서 플레이어 ID 가져오기
+    public string GetPlayerID()
+    {
+        return playerID;
+    }
+    
+    // 플레이어 정보 표시용
+    public string GetPlayerInfo()
+    {
+        return $"ID: {playerID}, Distance: {playerTotalDistance:F1}m";
+    }
+    
+    void SetupPlayerNameDisplay()
+    {
+        if (playerNameCanvas != null)
+        {
+            // 자신의 플레이어면 이름 캔버스 숨기기
+            if (isLocalPlayer)
+            {
+                playerNameCanvas.SetActive(false);
+                Debug.Log("[Player] 자신의 이름 표시 숨김");
+            }
+            else
+            {
+                playerNameCanvas.SetActive(true);
+                Debug.Log("[Player] 다른 플레이어 이름 표시 활성화");
+                
+                // 현재 ID가 있으면 표시
+                if (!string.IsNullOrEmpty(playerID))
+                {
+                    UpdatePlayerNameDisplay(playerID);
+                }
+            }
+        }
+        else
+        {
+            Debug.LogWarning("[Player] Player Name Canvas가 할당되지 않았습니다!");
+        }
+    }
+    
+    void UpdatePlayerNameDisplay(string id)
+    {
+        if (playerNameText != null && !isLocalPlayer)
+        {
+            playerNameText.text = id;
+            Debug.Log($"[Player] 이름 표시 업데이트: {id}");
+        }
     }
 }

@@ -291,11 +291,9 @@ public class AutoNetworkManager : NetworkManager
     private void DetermineNetworkMode()
     {
 #if UNITY_WEBGL && !UNITY_EDITOR
-        // WebGL: 무조건 Client 모드
-        StartCoroutine(StartClientDelayed());
-        
+        // WebGL: Client 모드이지만 UserIDManager에서 수동 연결
         if (enableDebugLogs)
-            Debug.Log("WebGL: Starting as Client");
+            Debug.Log("WebGL: Client mode ready (waiting for manual connection)");
             
 #else
         // Standalone: 아두이노 연결 여부에 따라 결정
@@ -488,5 +486,25 @@ public class AutoNetworkManager : NetworkManager
 
         if (enableDebugLogs)
             Debug.Log("Switched to SimpleWebTransport");
+    }
+    
+    // UserIDManager에서 호출할 수동 Client 연결 메소드
+    public void StartClientManually()
+    {
+        if (!NetworkClient.active)
+        {
+            // 로컬 네트워크 IP로 연결
+            networkAddress = localServerAddress;
+            
+            if (enableDebugLogs)
+                Debug.Log($"[Manual Connection] Connecting to: {networkAddress}");
+            
+            StartClient();
+        }
+        else
+        {
+            if (enableDebugLogs)
+                Debug.Log("[Manual Connection] Client already active");
+        }
     }
 }

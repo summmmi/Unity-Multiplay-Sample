@@ -74,11 +74,11 @@ public class StatusUIManager : MonoBehaviour
     
     void FindReferences()
     {
-        // ChangeEnvironment 찾기
+        // ChangeEnviroment 찾기 (오타 주의: Environment가 아니라 Enviroment)
         changeEnvironment = FindObjectOfType<ChangeEnviroment>();
         if (changeEnvironment == null)
         {
-            Debug.LogWarning("[StatusUIManager] ChangeEnvironment를 찾을 수 없습니다");
+            Debug.LogWarning("[StatusUIManager] ChangeEnviroment를 찾을 수 없습니다");
         }
     }
     
